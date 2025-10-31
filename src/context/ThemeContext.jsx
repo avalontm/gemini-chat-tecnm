@@ -58,3 +58,6 @@ export function useTheme() {
   }
   return context;
 }
+
+export { ThemeContext };
+export default ThemeContext;

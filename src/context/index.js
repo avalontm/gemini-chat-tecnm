@@ -1,5 +1,5 @@
-// Importar providers y hooks
-import { AuthProvider, useAuth, ChatProvider, useChat, ThemeProvider, useTheme } from '@context';
+// src/context/index.js
 
-// O importar contextos individuales si se necesita
-import { AuthContext, ChatContext, ThemeContext } from '@context';
+export { AuthContext, AuthProvider, useAuth } from './AuthContext';
+export { ChatContext, ChatProvider, useChat } from './ChatContext';
+export { default as ThemeContext, ThemeProvider, useTheme } from './ThemeContext';

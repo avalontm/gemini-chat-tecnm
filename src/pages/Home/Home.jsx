@@ -16,7 +16,7 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
       
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-20">
@@ -31,7 +31,7 @@ function Home() {
           {/* Title */}
           <h1 className="text-6xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 transition-colors">
             {SITE_CONFIG.home.hero.title}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
               {' '}{SITE_CONFIG.home.hero.titleHighlight}
             </span>
           </h1>
@@ -47,7 +47,7 @@ function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
               onClick={() => navigate(SITE_CONFIG.routes.register)}
-              className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+              className="group px-8 py-4 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
             >
               {SITE_CONFIG.home.hero.ctaPrimary}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -113,7 +113,7 @@ function Home() {
 
       {/* CTA Section */}
       <div className="container mx-auto px-4 py-20">
-        <div className="max-w-5xl mx-auto bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-800 rounded-3xl p-12 shadow-2xl transition-colors">
+        <div className="max-w-5xl mx-auto bg-linear-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-800 rounded-3xl p-12 shadow-2xl transition-colors">
           <div className="text-center text-white">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               {SITE_CONFIG.home.cta.title}

@@ -451,4 +451,5 @@ export const useChat = () => {
   return context;
 };
 
+export { ChatContext };
 export default ChatContext;
