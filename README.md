@@ -1,437 +1,200 @@
-# Estructura del Cliente React - Gemini API Project
-### Con React + Vite, JavaScript y Tailwind CSS
+# 🤖 Gemini Chat - TecNM Campus Ensenada
 
-## Estructura de Carpetas
+> Plataforma de chat con IA generativa powered by Google Gemini AI para la comunidad del Tecnológico Nacional de México Campus Ensenada.
 
-```
-gemini-client/
-│
-├── public/
-│   ├── favicon.ico
-│   └── robots.txt
-│
-├── src/
-│   │
-│   ├── api/
-│   │   ├── axios.config.js             # Configuración de Axios
-│   │   ├── interceptors.js             # Interceptores de request/response
-│   │   │
-│   │   ├── endpoints/
-│   │   │   ├── auth.api.js             # Endpoints de autenticación
-│   │   │   ├── gemini.api.js           # Endpoints de Gemini
-│   │   │   ├── conversation.api.js     # Endpoints de conversaciones
-│   │   │   ├── user.api.js             # Endpoints de usuario
-│   │   │   └── export.api.js           # Endpoints de exportación
-│   │   │
-│   │   └── index.js                    # Exporta todas las APIs
-│   │
-│   ├── assets/
-│   │   ├── images/
-│   │   │   ├── logo.svg
-│   │   │   └── placeholder.png
-│   │   │
-│   │   ├── icons/
-│   │   │   └── index.js                # Exporta todos los iconos
-│   │   │
-│   │   └── styles/
-│   │       └── index.css               # Estilos globales y Tailwind
-│   │
-│   ├── components/
-│   │   │
-│   │   ├── common/
-│   │   │   ├── Button/
-│   │   │   │   ├── Button.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Input/
-│   │   │   │   ├── Input.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Textarea/
-│   │   │   │   ├── Textarea.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Select/
-│   │   │   │   ├── Select.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Modal/
-│   │   │   │   ├── Modal.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Toast/
-│   │   │   │   ├── Toast.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Spinner/
-│   │   │   │   ├── Spinner.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Card/
-│   │   │   │   ├── Card.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Avatar/
-│   │   │   │   ├── Avatar.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   └── index.js                # Exporta todos los componentes comunes
-│   │   │
-│   │   ├── layout/
-│   │   │   ├── Header/
-│   │   │   │   ├── Header.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Sidebar/
-│   │   │   │   ├── Sidebar.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Footer/
-│   │   │   │   ├── Footer.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Navbar/
-│   │   │   │   ├── Navbar.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── MainLayout/
-│   │   │   │   ├── MainLayout.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   └── index.js                # Exporta componentes de layout
-│   │   │
-│   │   ├── auth/
-│   │   │   ├── LoginForm/
-│   │   │   │   ├── LoginForm.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── RegisterForm/
-│   │   │   │   ├── RegisterForm.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── PrivateRoute/
-│   │   │   │   ├── PrivateRoute.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   └── index.js
-│   │   │
-│   │   ├── chat/
-│   │   │   ├── ChatInput/
-│   │   │   │   ├── ChatInput.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── MessageList/
-│   │   │   │   ├── MessageList.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── Message/
-│   │   │   │   ├── Message.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── FileUpload/
-│   │   │   │   ├── FileUpload.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── ImagePreview/
-│   │   │   │   ├── ImagePreview.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── VoiceRecorder/
-│   │   │   │   ├── VoiceRecorder.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── TypingIndicator/
-│   │   │   │   ├── TypingIndicator.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   └── index.js
-│   │   │
-│   │   ├── conversation/
-│   │   │   ├── ConversationList/
-│   │   │   │   ├── ConversationList.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── ConversationItem/
-│   │   │   │   ├── ConversationItem.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── ConversationHeader/
-│   │   │   │   ├── ConversationHeader.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── NewConversationButton/
-│   │   │   │   ├── NewConversationButton.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   └── index.js
-│   │   │
-│   │   ├── profile/
-│   │   │   ├── ProfileCard/
-│   │   │   │   ├── ProfileCard.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── ProfileForm/
-│   │   │   │   ├── ProfileForm.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   ├── AvatarUpload/
-│   │   │   │   ├── AvatarUpload.jsx
-│   │   │   │   └── index.js
-│   │   │   │
-│   │   │   └── index.js
-│   │   │
-│   │   └── index.js                    # Exporta todos los componentes
-│   │
-│   ├── hooks/
-│   │   ├── useAuth.js                  # Hook para autenticación
-│   │   ├── useChat.js                  # Hook para chat
-│   │   ├── useConversation.js          # Hook para conversaciones
-│   │   ├── useFileUpload.js            # Hook para subida de archivos
-│   │   ├── useVoiceRecorder.js         # Hook para grabación de voz
-│   │   ├── useToast.js                 # Hook para notificaciones
-│   │   ├── useDebounce.js              # Hook para debounce
-│   │   ├── useLocalStorage.js          # Hook para localStorage
-│   │   ├── useMediaQuery.js            # Hook para responsive
-│   │   └── index.js                    # Exporta todos los hooks
-│   │
-│   ├── context/
-│   │   ├── AuthContext.jsx             # Context de autenticación
-│   │   ├── ChatContext.jsx             # Context de chat
-│   │   ├── ThemeContext.jsx            # Context de tema
-│   │   ├── ToastContext.jsx            # Context de notificaciones
-│   │   └── index.js                    # Exporta todos los contexts
-│   │
-│   ├── pages/
-│   │   ├── Home/
-│   │   │   ├── Home.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   ├── Login/
-│   │   │   ├── Login.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   ├── Register/
-│   │   │   ├── Register.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   ├── Chat/
-│   │   │   ├── Chat.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   ├── Profile/
-│   │   │   ├── Profile.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   ├── Conversations/
-│   │   │   ├── Conversations.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   ├── NotFound/
-│   │   │   ├── NotFound.jsx
-│   │   │   └── index.js
-│   │   │
-│   │   └── index.js                    # Exporta todas las páginas
-│   │
-│   ├── routes/
-│   │   ├── AppRoutes.jsx               # Definición de rutas
-│   │   ├── routes.config.js            # Configuración de rutas
-│   │   └── index.js
-│   │
-│   ├── utils/
-│   │   ├── validators/
-│   │   │   ├── authValidator.js        # Validaciones de auth
-│   │   │   ├── fileValidator.js        # Validaciones de archivos
-│   │   │   └── index.js
-│   │   │
-│   │   ├── helpers/
-│   │   │   ├── formatters.js           # Funciones de formateo
-│   │   │   ├── dateHelpers.js          # Helpers de fechas
-│   │   │   ├── fileHelpers.js          # Helpers de archivos
-│   │   │   ├── stringHelpers.js        # Helpers de strings
-│   │   │   └── index.js
-│   │   │
-│   │   ├── constants.js                # Constantes globales
-│   │   ├── errorMessages.js            # Mensajes de error
-│   │   └── index.js
-│   │
-│   ├── config/
-│   │   ├── api.config.js               # Configuración de API
-│   │   ├── app.config.js               # Configuración de la app
-│   │   └── index.js
-│   │
-│   ├── store/
-│   │   ├── slices/                     # Slices de Redux (opcional)
-│   │   │   ├── authSlice.js
-│   │   │   ├── chatSlice.js
-│   │   │   └── conversationSlice.js
-│   │   │
-│   │   ├── store.js                    # Configuración de Redux store
-│   │   └── index.js
-│   │
-│   ├── App.jsx                         # Componente principal
-│   ├── main.jsx                        # Entry point
-│   └── index.css                       # Estilos globales con Tailwind
-│
-├── .env.example                        # Ejemplo de variables de entorno
-├── .env                                # Variables de entorno REAL (gitignored)
-├── .env.development                    # Variables de desarrollo
-├── .env.production                     # Variables de producción
-├── .gitignore                          # Archivos ignorados por Git
-├── .eslintrc.cjs                       # Configuración ESLint
-├── .prettierrc                         # Configuración Prettier
-├── index.html                          # HTML principal
-├── vite.config.js                      # Configuración de Vite
-├── tailwind.config.js                  # Configuración de Tailwind
-├── postcss.config.js                   # Configuración de PostCSS
-├── jsconfig.json                       # Configuración de paths
-├── package.json                        # Dependencias y scripts
-├── package-lock.json
-└── README.md                           # Documentación del proyecto
+[![React](https://img.shields.io/badge/React-19.1.1-61DAFB?logo=react)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.1.7-646CFF?logo=vite)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1.16-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+![Gemini Chat Preview](https://via.placeholder.com/1200x600/0ea5e9/ffffff?text=Gemini+Chat+TecNM)
+
+---
+
+## 📋 Tabla de Contenidos
+
+- [Características](#-características)
+- [Tecnologías](#-tecnologías)
+- [Requisitos Previos](#-requisitos-previos)
+- [Instalación](#-instalación)
+- [Configuración](#-configuración)
+- [Scripts Disponibles](#-scripts-disponibles)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Arquitectura](#-arquitectura)
+- [Componentes Principales](#-componentes-principales)
+- [Variables de Entorno](#-variables-de-entorno)
+- [Rutas](#-rutas)
+- [API Integration](#-api-integration)
+- [Deployment](#-deployment)
+- [Contribuir](#-contribuir)
+- [Licencia](#-licencia)
+
+---
+
+## ✨ Características
+
+### 🎯 Funcionalidades Principales
+
+- **Chat Inteligente**: Conversaciones naturales con Google Gemini AI
+- **Respuestas Contextuales**: IA que entiende el contexto de la conversación
+- **Análisis Multimodal**: Soporte para texto, imágenes, audio y documentos
+- **Historial de Conversaciones**: Guarda y gestiona múltiples chats
+- **Interfaz Moderna**: UI/UX diseñada con Tailwind CSS v4
+- **Modo Oscuro**: Theme switcher con soporte completo dark/light mode
+- **Responsive Design**: Adaptable a cualquier dispositivo
+- **Autenticación Segura**: Sistema completo de login/registro
+- **Upload de Archivos**: Sube imágenes, PDFs y audio
+- **Grabación de Voz**: Graba y envía mensajes de voz
+- **Exportación**: Exporta conversaciones a PDF o TXT
+
+### 🔒 Seguridad
+
+- Autenticación JWT
+- Rutas protegidas con PrivateRoute
+- Validación de formularios client-side
+- Sanitización de inputs
+- Manejo seguro de tokens
+
+### 🎨 UI/UX
+
+- Diseño moderno y profesional
+- Animaciones suaves y transiciones
+- Loading states y feedback visual
+- Toast notifications para acciones
+- Skeleton loaders
+- Error boundaries
+
+---
+
+## 🛠 Tecnologías
+
+### Core
+
+| Tecnología | Versión | Descripción |
+|------------|---------|-------------|
+| **React** | 19.1.1 | Biblioteca UI principal |
+| **Vite** | 7.1.7 | Build tool y dev server |
+| **React Router** | 7.9.5 | Routing y navegación |
+
+### Styling
+
+| Tecnología | Versión | Descripción |
+|------------|---------|-------------|
+| **Tailwind CSS** | 4.1.16 | Framework CSS utility-first |
+| **Lucide React** | 0.548.0 | Iconos modernos |
+| **clsx** | 2.1.1 | Utilidad para clases condicionales |
+| **tailwind-merge** | 3.3.1 | Merge inteligente de clases |
+
+### State Management & Data
+
+| Tecnología | Versión | Descripción |
+|------------|---------|-------------|
+| **Axios** | 1.13.1 | Cliente HTTP |
+| **date-fns** | 4.1.0 | Manejo de fechas |
+| **react-hot-toast** | 2.6.0 | Sistema de notificaciones |
+
+### Development Tools
+
+| Herramienta | Versión | Descripción |
+|-------------|---------|-------------|
+| **ESLint** | 9.36.0 | Linter de código |
+| **Prettier** | 3.6.2 | Formateador de código |
+| **Prettier Plugin Tailwind** | 0.7.1 | Ordenar clases Tailwind |
+
+---
+
+## 📦 Requisitos Previos
+
+Antes de comenzar, asegúrate de tener instalado:
+
+- **Node.js** >= 16.x
+- **npm** >= 8.x (o **yarn** >= 1.22.x)
+- **Git**
+
+Verifica tus versiones:
+
+```bash
+node --version
+npm --version
+git --version
 ```
 
 ---
 
-## Descripción de Carpetas Principales
+## 🚀 Instalación
 
-### api/
-Configuración de Axios y todos los endpoints organizados por funcionalidad. Incluye interceptores para manejo de tokens y errores.
+### 1. Clonar el repositorio
 
-### assets/
-Recursos estáticos como imágenes, iconos y estilos globales.
-
-### components/
-Componentes React organizados por funcionalidad:
-- `common/` - Componentes reutilizables (botones, inputs, modales)
-- `layout/` - Componentes de estructura (header, sidebar, footer)
-- `auth/` - Componentes de autenticación
-- `chat/` - Componentes del chat
-- `conversation/` - Componentes de gestión de conversaciones
-- `profile/` - Componentes de perfil de usuario
-
-### hooks/
-Custom hooks para lógica reutilizable:
-- Autenticación
-- Chat y mensajería
-- Upload de archivos
-- Grabación de voz
-- Notificaciones
-- Utilidades generales
-
-### context/
-Context API de React para estado global:
-- Autenticación
-- Chat activo
-- Tema de la aplicación
-- Sistema de notificaciones
-
-### pages/
-Páginas principales de la aplicación. Cada página es una vista completa.
-
-### routes/
-Configuración y definición de rutas de React Router.
-
-### utils/
-Funciones utilitarias, validadores, helpers y constantes.
-
-### config/
-Archivos de configuración centralizada.
-
-### store/
-Redux store y slices (opcional, si decides usar Redux en lugar de Context API).
-
----
-
-## Dependencias
-
-```json
-{
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1",
-    "axios": "^1.6.2",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.1.0",
-    "lucide-react": "^0.294.0",
-    "react-hot-toast": "^2.4.1",
-    "zustand": "^4.4.7",
-    "date-fns": "^3.0.6"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.0.8",
-    "tailwindcss": "^3.3.6",
-    "postcss": "^8.4.32",
-    "autoprefixer": "^10.4.16",
-    "eslint": "^8.55.0",
-    "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
-    "prettier": "^3.1.1",
-    "prettier-plugin-tailwindcss": "^0.5.9"
-  }
-}
+```bash
+git clone https://github.com/tu-usuario/gemini-chat-tecnm.git
+cd gemini-chat-tecnm
 ```
 
----
+### 2. Instalar dependencias
 
-## Variables de Entorno
+```bash
+npm install
+```
 
-### .env.example
+O con yarn:
+
+```bash
+yarn install
+```
+
+### 3. Configurar variables de entorno
+
+Copia el archivo de ejemplo y configura tus variables:
+
+```bash
+cp .env.example .env
+```
+
+Edita el archivo `.env` con tus valores:
 
 ```env
-# API Configuration
 VITE_API_URL=http://localhost:5000
 VITE_API_TIMEOUT=30000
-
-# Application
-VITE_APP_NAME=Gemini Chat
-VITE_APP_VERSION=1.0.0
-
-# Features
-VITE_ENABLE_VOICE_RECORDING=true
-VITE_ENABLE_IMAGE_UPLOAD=true
-VITE_ENABLE_PDF_UPLOAD=true
-
-# File Upload Limits
-VITE_MAX_FILE_SIZE=10485760
-VITE_MAX_IMAGE_SIZE=5242880
-VITE_MAX_AUDIO_SIZE=10485760
-VITE_MAX_PDF_SIZE=10485760
-
-# Other
-VITE_ENABLE_ANALYTICS=false
+VITE_APP_NAME=Gemini Chat TecNM
 ```
 
-### .env.development
+### 4. Iniciar servidor de desarrollo
 
-```env
-VITE_API_URL=http://localhost:5000
-VITE_ENABLE_ANALYTICS=false
+```bash
+npm run dev
 ```
 
-### .env.production
-
-```env
-VITE_API_URL=https://api.production.com
-VITE_ENABLE_ANALYTICS=true
-```
+La aplicación estará disponible en: **http://localhost:5173**
 
 ---
 
-## Archivos de Configuración
+## ⚙️ Configuración
 
-### vite.config.js
+### Tailwind CSS v4
+
+El proyecto usa Tailwind CSS v4 con la nueva sintaxis `@import`. Configuración en `src/index.css`:
+
+```css
+@import "tailwindcss";
+
+@layer base {
+  /* Estilos base */
+}
+
+@layer utilities {
+  /* Utilidades personalizadas */
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+### Vite Configuration
+
+Configuración con aliases para imports limpios:
 
 ```javascript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-
+// vite.config.js
 export default defineConfig({
-  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -441,913 +204,713 @@ export default defineConfig({
       '@context': path.resolve(__dirname, './src/context'),
       '@api': path.resolve(__dirname, './src/api'),
       '@utils': path.resolve(__dirname, './src/utils'),
-      '@assets': path.resolve(__dirname, './src/assets'),
       '@config': path.resolve(__dirname, './src/config'),
-    },
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
-    },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-});
-```
-
-### tailwind.config.js
-
-```javascript
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      colors: {
-        primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-      },
-    },
-  },
-  plugins: [],
-};
-```
-
-### postcss.config.js
-
-```javascript
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-};
-```
-
-### jsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@pages/*": ["src/pages/*"],
-      "@hooks/*": ["src/hooks/*"],
-      "@context/*": ["src/context/*"],
-      "@api/*": ["src/api/*"],
-      "@utils/*": ["src/utils/*"],
-      "@assets/*": ["src/assets/*"],
-      "@config/*": ["src/config/*"]
     }
-  },
-  "include": ["src"]
-}
+  }
+})
 ```
 
-### .eslintrc.cjs
+### Constantes del Sitio
+
+Todos los textos y configuraciones están centralizados en `src/config/constants.js`:
 
 ```javascript
-module.exports = {
-  root: true,
-  env: { browser: true, es2020: true },
-  extends: [
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react/jsx-runtime',
-    'plugin:react-hooks/recommended',
-  ],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
-  parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
-  settings: { react: { version: '18.2' } },
-  plugins: ['react-refresh'],
-  rules: {
-    'react-refresh/only-export-components': [
-      'warn',
-      { allowConstantExport: true },
-    ],
-    'react/prop-types': 'off',
-    'no-unused-vars': 'warn',
-  },
-};
-```
+import { SITE_CONFIG } from '@config/constants';
 
-### .prettierrc
-
-```json
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": true,
-  "printWidth": 100,
-  "tabWidth": 2,
-  "plugins": ["prettier-plugin-tailwindcss"]
-}
+// Usar en componentes
+<h1>{SITE_CONFIG.home.hero.title}</h1>
 ```
 
 ---
 
-## Scripts NPM
+## 📜 Scripts Disponibles
 
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext js,jsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{js,jsx,css}\""
-  }
-}
-```
+| Script | Comando | Descripción |
+|--------|---------|-------------|
+| **Desarrollo** | `npm run dev` | Inicia servidor de desarrollo |
+| **Build** | `npm run build` | Genera build de producción |
+| **Preview** | `npm run preview` | Preview del build de producción |
+| **Lint** | `npm run lint` | Ejecuta ESLint |
+| **Lint Fix** | `npm run lint:fix` | Corrige errores de ESLint |
+| **Format** | `npm run format` | Formatea código con Prettier |
+| **Format Check** | `npm run format:check` | Verifica formateo |
 
----
-
-## Instalación y Configuración
-
-### Paso 1: Crear proyecto con Vite
+### Ejemplos de uso
 
 ```bash
-npm create vite@latest gemini-client -- --template react
-cd gemini-client
-```
-
-### Paso 2: Instalar dependencias base
-
-```bash
-npm install
-```
-
-### Paso 3: Instalar Tailwind CSS
-
-```bash
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
-```
-
-### Paso 4: Instalar dependencias adicionales
-
-```bash
-# Dependencias de producción
-npm install react-router-dom axios clsx tailwind-merge lucide-react react-hot-toast zustand date-fns
-
-# Dependencias de desarrollo
-npm install -D prettier prettier-plugin-tailwindcss eslint-plugin-react eslint-plugin-react-hooks
-```
-
-### Paso 5: Crear estructura de carpetas
-
-```bash
-# En Linux/Mac
-mkdir -p src/{api/endpoints,assets/{images,icons,styles},components/{common/{Button,Input,Textarea,Select,Modal,Toast,Spinner,Card,Avatar},layout/{Header,Sidebar,Footer,Navbar,MainLayout},auth/{LoginForm,RegisterForm,PrivateRoute},chat/{ChatInput,MessageList,Message,FileUpload,ImagePreview,VoiceRecorder,TypingIndicator},conversation/{ConversationList,ConversationItem,ConversationHeader,NewConversationButton},profile/{ProfileCard,ProfileForm,AvatarUpload}},hooks,context,pages/{Home,Login,Register,Chat,Profile,Conversations,NotFound},routes,utils/{validators,helpers},config,store/slices}
-
-# En Windows (PowerShell)
-New-Item -ItemType Directory -Force -Path src/api/endpoints,src/assets/images,src/assets/icons,src/assets/styles,src/components/common/Button,src/components/common/Input,src/components/common/Textarea,src/components/common/Select,src/components/common/Modal,src/components/common/Toast,src/components/common/Spinner,src/components/common/Card,src/components/common/Avatar,src/components/layout/Header,src/components/layout/Sidebar,src/components/layout/Footer,src/components/layout/Navbar,src/components/layout/MainLayout,src/components/auth/LoginForm,src/components/auth/RegisterForm,src/components/auth/PrivateRoute,src/components/chat/ChatInput,src/components/chat/MessageList,src/components/chat/Message,src/components/chat/FileUpload,src/components/chat/ImagePreview,src/components/chat/VoiceRecorder,src/components/chat/TypingIndicator,src/components/conversation/ConversationList,src/components/conversation/ConversationItem,src/components/conversation/ConversationHeader,src/components/conversation/NewConversationButton,src/components/profile/ProfileCard,src/components/profile/ProfileForm,src/components/profile/AvatarUpload,src/hooks,src/context,src/pages/Home,src/pages/Login,src/pages/Register,src/pages/Chat,src/pages/Profile,src/pages/Conversations,src/pages/NotFound,src/routes,src/utils/validators,src/utils/helpers,src/config,src/store/slices
-```
-
-### Paso 6: Configurar Tailwind
-
-Actualizar `src/index.css`:
-
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-```
-
-### Paso 7: Crear archivos de configuración
-
-Crear los siguientes archivos:
-- `vite.config.js`
-- `tailwind.config.js`
-- `postcss.config.js`
-- `jsconfig.json`
-- `.eslintrc.cjs`
-- `.prettierrc`
-
-### Paso 8: Crear archivo .gitignore
-
-```bash
-# .gitignore
-node_modules
-dist
-dist-ssr
-*.local
-.env
-.env.local
-.env.*.local
-.DS_Store
-```
-
-### Paso 9: Configurar variables de entorno
-
-```bash
-# Copiar ejemplo
-cp .env.example .env
-
-# Editar con tus valores
-nano .env
-```
-
-### Paso 10: Crear archivos index.js para exportaciones
-
-En cada carpeta de componentes, crear un `index.js` que exporte los componentes:
-
-```javascript
-// Ejemplo: src/components/common/index.js
-export { default as Button } from './Button/Button';
-export { default as Input } from './Input/Input';
-export { default as Modal } from './Modal/Modal';
-// ... etc
-```
-
-### Paso 11: Actualizar main.jsx
-
-```javascript
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import './index.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-```
-
-### Paso 12: Crear App.jsx básico
-
-```javascript
-import { BrowserRouter } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import AppRoutes from './routes/AppRoutes';
-
-function App() {
-  return (
-    <BrowserRouter>
-      <AppRoutes />
-      <Toaster position="top-right" />
-    </BrowserRouter>
-  );
-}
-
-export default App;
-```
-
-### Paso 13: Iniciar servidor de desarrollo
-
-```bash
+# Desarrollo
 npm run dev
-```
 
-El cliente debería iniciar en `http://localhost:5173`
-
-### Paso 14: Build para producción
-
-```bash
+# Build para producción
 npm run build
-```
 
-Los archivos optimizados se generan en `/dist`
+# Verificar y corregir código
+npm run lint:fix
+npm run format
 
-### Paso 15: Preview de producción
-
-```bash
+# Preview de producción local
 npm run preview
 ```
 
 ---
 
-## Estructura de Componentes
+## 📁 Estructura del Proyecto
 
-### Componentes Comunes
-Componentes reutilizables como botones, inputs, modales, etc. Siguen un patrón consistente de diseño.
+```
+gemini-client/
+│
+├── public/                          # Archivos estáticos
+│   ├── favicon.ico
+│   └── robots.txt
+│
+├── src/
+│   ├── api/                         # Configuración de API
+│   │   ├── axios.config.js
+│   │   ├── interceptors.js
+│   │   └── endpoints/
+│   │       ├── auth.api.js
+│   │       ├── gemini.api.js
+│   │       └── conversation.api.js
+│   │
+│   ├── assets/                      # Recursos estáticos
+│   │   ├── images/
+│   │   ├── icons/
+│   │   └── styles/
+│   │
+│   ├── components/                  # Componentes React
+│   │   ├── common/                  # Componentes reutilizables
+│   │   │   ├── Button/
+│   │   │   ├── Input/
+│   │   │   ├── Modal/
+│   │   │   └── ...
+│   │   │
+│   │   ├── layout/                  # Componentes de layout
+│   │   │   ├── Header/
+│   │   │   ├── Sidebar/
+│   │   │   ├── Footer/
+│   │   │   └── MainLayout/
+│   │   │
+│   │   ├── auth/                    # Componentes de autenticación
+│   │   │   ├── LoginForm/
+│   │   │   ├── RegisterForm/
+│   │   │   └── PrivateRoute/
+│   │   │
+│   │   ├── chat/                    # Componentes de chat
+│   │   │   ├── ChatInput/
+│   │   │   ├── MessageList/
+│   │   │   ├── Message/
+│   │   │   ├── FileUpload/
+│   │   │   └── VoiceRecorder/
+│   │   │
+│   │   └── conversation/            # Gestión de conversaciones
+│   │       ├── ConversationList/
+│   │       └── ConversationItem/
+│   │
+│   ├── config/                      # Archivos de configuración
+│   │   ├── constants.js             # ✨ Constantes globales del sitio
+│   │   ├── api.config.js
+│   │   └── app.config.js
+│   │
+│   ├── context/                     # React Context API
+│   │   ├── AuthContext.jsx
+│   │   ├── ChatContext.jsx
+│   │   ├── ThemeContext.jsx
+│   │   └── index.js
+│   │
+│   ├── hooks/                       # Custom React Hooks
+│   │   ├── useAuth.js
+│   │   ├── useChat.js
+│   │   ├── useConversation.js
+│   │   ├── useFileUpload.js
+│   │   ├── useVoiceRecorder.js
+│   │   └── useTheme.js
+│   │
+│   ├── pages/                       # Páginas de la aplicación
+│   │   ├── Home/
+│   │   │   ├── Home.jsx             # ✨ Usa SITE_CONFIG
+│   │   │   └── index.js
+│   │   ├── Login/
+│   │   ├── Register/
+│   │   ├── Chat/
+│   │   ├── Profile/
+│   │   └── NotFound/
+│   │
+│   ├── routes/                      # Configuración de rutas
+│   │   ├── AppRoutes.jsx
+│   │   └── routes.config.js
+│   │
+│   ├── utils/                       # Utilidades y helpers
+│   │   ├── validators/
+│   │   ├── helpers/
+│   │   └── errorMessages.js
+│   │
+│   ├── App.jsx                      # Componente raíz
+│   ├── main.jsx                     # Entry point
+│   └── index.css                    # ✨ Estilos globales con Tailwind v4
+│
+├── .env.example                     # Ejemplo de variables de entorno
+├── .env                             # Variables de entorno (gitignored)
+├── .gitignore
+├── .eslintrc.cjs
+├── .prettierrc
+├── index.html
+├── vite.config.js                   # ✨ Configuración con aliases
+├── tailwind.config.js
+├── postcss.config.js
+├── jsconfig.json
+├── package.json
+└── README.md
+```
 
-### Componentes de Layout
-Estructuran la aplicación: header, sidebar, footer, navbar, layout principal.
+### 📂 Componentes por Categoría
 
-### Componentes de Autenticación
-Formularios de login y registro, rutas protegidas.
+#### Common Components (Reutilizables)
+- Button, Input, Textarea, Select
+- Modal, Toast, Spinner
+- Card, Avatar, Badge
 
-### Componentes de Chat
-Todo lo relacionado con la interfaz de chat: input, lista de mensajes, mensajes individuales, upload de archivos, preview de imágenes, grabación de voz.
+#### Layout Components
+- Header (con theme switcher)
+- Sidebar (navegación)
+- Footer
+- MainLayout (wrapper principal)
 
-### Componentes de Conversaciones
-Gestión de conversaciones: lista, items individuales, headers, botón de nueva conversación.
+#### Auth Components
+- LoginForm
+- RegisterForm
+- PrivateRoute (protección de rutas)
 
-### Componentes de Perfil
-Gestión de perfil de usuario: card, formulario, upload de avatar.
+#### Chat Components
+- ChatInput (input de mensajes)
+- MessageList (lista de mensajes)
+- Message (mensaje individual)
+- FileUpload (subir archivos)
+- ImagePreview (preview de imágenes)
+- VoiceRecorder (grabar voz)
+- TypingIndicator (indicador de escritura)
+
+#### Conversation Components
+- ConversationList (lista de chats)
+- ConversationItem (item individual)
+- ConversationHeader (header del chat)
+- NewConversationButton
 
 ---
 
-## Sistema de Rutas
+## 🏗 Arquitectura
+
+### Context API Structure
+
+```
+App
+├── AuthContext (usuario, token, login, logout)
+│   ├── ChatContext (conversación activa, mensajes)
+│   │   └── ThemeContext (dark/light mode)
+│   │       └── ToastContext (notificaciones)
+```
+
+### Component Architecture
+
+```
+Page Component
+├── Layout Component
+│   ├── Header
+│   ├── Sidebar
+│   ├── Main Content
+│   │   ├── Feature Component
+│   │   │   ├── Common Components
+│   │   │   └── Custom Hooks
+│   │   └── ...
+│   └── Footer
+```
+
+### Data Flow
+
+```
+User Action → Component → Hook → API Call → Context Update → Re-render
+```
+
+---
+
+## 🧩 Componentes Principales
+
+### Home Page
+
+Landing page del sitio con:
+- Hero section con call-to-action
+- Features section con iconos
+- Stats section (usuarios, mensajes, uptime)
+- CTA section con botón de registro
+- Footer institucional
+
+**Ubicación**: `src/pages/Home/Home.jsx`
+
+**Uso de constantes**:
+```javascript
+import { SITE_CONFIG } from '@config/constants';
+
+// Título dinámico desde constantes
+<h1>{SITE_CONFIG.home.hero.title}</h1>
+
+// Features desde configuración
+{SITE_CONFIG.home.features.items.map(feature => (
+  <FeatureCard {...feature} />
+))}
+```
+
+### Authentication
+
+Sistema completo de autenticación con:
+- Formulario de login
+- Formulario de registro
+- Validación de campos
+- Manejo de errores
+- Redirect después de login
+
+### Chat Interface
+
+Interfaz principal de chat con:
+- Sidebar con lista de conversaciones
+- Área principal de mensajes
+- Input de mensajes con opciones
+- Upload de archivos
+- Grabación de voz
+- Preview de imágenes
+
+### Theme Switcher
+
+Toggle entre modo claro y oscuro:
+- Guardado en localStorage
+- Persistente entre sesiones
+- Smooth transitions
+
+---
+
+## 🔐 Variables de Entorno
+
+### Archivo .env.example
+
+```env
+# API Configuration
+VITE_API_URL=http://localhost:5000
+VITE_API_TIMEOUT=30000
+
+# Application
+VITE_APP_NAME=Gemini Chat TecNM
+VITE_APP_VERSION=1.0.0
+
+# Features
+VITE_ENABLE_VOICE_RECORDING=true
+VITE_ENABLE_IMAGE_UPLOAD=true
+VITE_ENABLE_PDF_UPLOAD=true
+
+# File Upload Limits (bytes)
+VITE_MAX_FILE_SIZE=10485760        # 10MB
+VITE_MAX_IMAGE_SIZE=5242880        # 5MB
+VITE_MAX_AUDIO_SIZE=10485760       # 10MB
+VITE_MAX_PDF_SIZE=10485760         # 10MB
+
+# Analytics
+VITE_ENABLE_ANALYTICS=false
+```
+
+### Ambientes
+
+**Desarrollo** (`.env.development`):
+```env
+VITE_API_URL=http://localhost:5000
+VITE_ENABLE_ANALYTICS=false
+```
+
+**Producción** (`.env.production`):
+```env
+VITE_API_URL=https://api.tu-dominio.com
+VITE_ENABLE_ANALYTICS=true
+```
+
+> **⚠️ Importante**: Todas las variables deben comenzar con `VITE_` para ser accesibles en el cliente.
+
+---
+
+## 🛣 Rutas
 
 ### Rutas Públicas
-- `/` - Home/Landing page
-- `/login` - Login
-- `/register` - Registro
 
-### Rutas Protegidas
-- `/chat` - Chat principal
-- `/chat/:conversationId` - Conversación específica
-- `/conversations` - Lista de conversaciones
-- `/profile` - Perfil de usuario
+| Ruta | Componente | Descripción |
+|------|-----------|-------------|
+| `/` | Home | Landing page |
+| `/login` | Login | Inicio de sesión |
+| `/register` | Register | Registro de usuario |
+
+### Rutas Protegidas (requieren autenticación)
+
+| Ruta | Componente | Descripción |
+|------|-----------|-------------|
+| `/chat` | Chat | Chat principal |
+| `/chat/:id` | Chat | Conversación específica |
+| `/conversations` | Conversations | Lista de conversaciones |
+| `/profile` | Profile | Perfil de usuario |
+| `/settings` | Settings | Configuración |
 
 ### Rutas de Error
-- `/404` - Página no encontrada
-- `*` - Redirect a 404
+
+| Ruta | Componente | Descripción |
+|------|-----------|-------------|
+| `/404` | NotFound | Página no encontrada |
+| `*` | NotFound | Wildcard redirect |
+
+### Protección de Rutas
+
+```javascript
+// Uso de PrivateRoute
+<Route 
+  path="/chat" 
+  element={
+    <PrivateRoute>
+      <Chat />
+    </PrivateRoute>
+  } 
+/>
+```
 
 ---
 
-## Hooks Personalizados
-
-### useAuth
-Maneja autenticación: login, logout, registro, estado del usuario.
-
-### useChat
-Maneja lógica del chat: enviar mensajes, recibir respuestas, historial.
-
-### useConversation
-Maneja conversaciones: listar, crear, eliminar, actualizar.
-
-### useFileUpload
-Maneja upload de archivos: validación, preview, envío.
-
-### useVoiceRecorder
-Maneja grabación de voz: iniciar, detener, enviar audio.
-
-### useToast
-Sistema de notificaciones toast.
-
-### useDebounce
-Debounce para inputs de búsqueda.
-
-### useLocalStorage
-Persistencia en localStorage.
-
-### useMediaQuery
-Detección responsive.
-
----
-
-## Context API
-
-### AuthContext
-Estado global de autenticación:
-- Usuario actual
-- Token
-- Estado de carga
-- Funciones de auth
-
-### ChatContext
-Estado global del chat:
-- Conversación activa
-- Mensajes
-- Estado de escritura
-- Funciones de chat
-
-### ThemeContext
-Tema de la aplicación:
-- Light/Dark mode
-- Preferencias de usuario
-
-### ToastContext
-Sistema de notificaciones:
-- Mostrar toast
-- Tipos: success, error, warning, info
-
----
-
-## API Client
+## 🔌 API Integration
 
 ### Configuración de Axios
-- Interceptores para tokens
-- Manejo de errores automático
-- Refresh de tokens
-- Cancelación de requests
-- Transformación de respuestas
 
-### Endpoints Organizados
-
-#### auth.api.js
-- `login(email, password)`
-- `register(username, email, password)`
-- `logout()`
-- `getProfile()`
-- `updateProfile(data)`
-
-#### gemini.api.js
-- `sendText(prompt, temperature)`
-- `sendImage(formData)`
-- `sendVoice(formData)`
-- `sendMultimodal(formData)`
-- `sendPDF(formData)`
-
-#### conversation.api.js
-- `getConversations()`
-- `getConversation(id)`
-- `createConversation(title)`
-- `updateConversation(id, data)`
-- `deleteConversation(id)`
-
-#### user.api.js
-- `getUserProfile()`
-- `updateUserProfile(data)`
-- `uploadAvatar(file)`
-
-#### export.api.js
-- `exportConversationPDF(conversationId)`
-- `exportConversationTXT(conversationId)`
-
----
-
-## Estilos y Diseño
-
-### Tailwind CSS
-Sistema de diseño basado en Tailwind con clases utilitarias.
-
-### Sistema de Colores
-- Primary: Azul (personalizable en tailwind.config.js)
-- Secondary: Gris
-- Success: Verde
-- Warning: Amarillo
-- Error: Rojo
-- Info: Azul claro
-
-### Responsive Design
-- Mobile first
-- Breakpoints: sm, md, lg, xl, 2xl
-- Sidebar colapsable en mobile
-- Chat adaptable
-
-### Dark Mode
-Soporte para tema oscuro con switch en header.
-
----
-
-## Validaciones
-
-### Client-side Validation
-- Email válido
-- Password mínimo 8 caracteres
-- Username mínimo 3 caracteres
-- Validación de archivos (tipo y tamaño)
-- Validación de formularios en tiempo real
-
-### Validadores
-- `authValidator.js` - Email, password, username
-- `fileValidator.js` - Tipo, tamaño, extensión de archivos
-
----
-
-## Manejo de Errores
-
-### Toast Notifications
-Notificaciones para:
-- Errores de red
-- Errores de autenticación
-- Errores de validación
-- Mensajes de éxito
-- Información general
-
-### Error Boundaries
-Componentes que capturan errores de React y muestran UI de fallback.
-
-### Retry Logic
-Reintentos automáticos para requests fallidos.
-
----
-
-## Optimizaciones
-
-### Code Splitting
-Carga lazy de páginas y componentes pesados:
 ```javascript
-const Chat = lazy(() => import('@pages/Chat'));
+// src/api/axios.config.js
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: import.meta.env.VITE_API_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para agregar token
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export default api;
 ```
 
-### Image Optimization
-- Lazy loading de imágenes
-- Placeholders
-- Compresión antes de upload
+### Endpoints
 
-### Memoization
-- useMemo para cálculos costosos
-- useCallback para funciones
-- React.memo para componentes
+#### Auth API
 
-### Debouncing
-Debounce en inputs de búsqueda y filtros.
+```javascript
+// src/api/endpoints/auth.api.js
+import api from '../axios.config';
+
+export const authAPI = {
+  login: (email, password) => 
+    api.post('/api/auth/login', { email, password }),
+  
+  register: (username, email, password) => 
+    api.post('/api/auth/register', { username, email, password }),
+  
+  logout: () => 
+    api.post('/api/auth/logout'),
+  
+  getProfile: () => 
+    api.get('/api/auth/profile'),
+};
+```
+
+#### Gemini API
+
+```javascript
+// src/api/endpoints/gemini.api.js
+import api from '../axios.config';
+
+export const geminiAPI = {
+  sendText: (prompt, conversationId, temperature = 0.7) =>
+    api.post('/api/gemini/text', { prompt, conversationId, temperature }),
+  
+  sendImage: (formData) =>
+    api.post('/api/gemini/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  
+  sendVoice: (formData) =>
+    api.post('/api/gemini/voice', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+};
+```
 
 ---
 
-## Testing (Opcional)
+## 🎨 Estilos y Theming
 
-### Herramientas
-- Vitest para unit tests
-- React Testing Library para componentes
-- MSW para mock de API
+### Tailwind CSS v4
 
-### Comandos
-```bash
-npm install -D vitest @testing-library/react @testing-library/jest-dom msw
-```
+**Nueva sintaxis con `@import`**:
 
-### Scripts adicionales
-```json
-{
-  "test": "vitest",
-  "test:ui": "vitest --ui",
-  "coverage": "vitest --coverage"
+```css
+/* src/index.css */
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
 }
 ```
 
+### Dark Mode
+
+Implementado con clases y variables CSS:
+
+```javascript
+// ThemeContext
+const toggleTheme = () => {
+  const newTheme = theme === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', newTheme);
+};
+```
+
+### Color Palette
+
+```
+Primary: Blue (bg-blue-600, text-blue-600)
+Secondary: Indigo (bg-indigo-600)
+Success: Green (bg-green-600)
+Warning: Yellow (bg-yellow-600)
+Error: Red (bg-red-600)
+Gray Scale: slate-50 to slate-900
+```
+
 ---
 
-## Deployment
+## 📱 Responsive Design
 
-### Build
+### Breakpoints
+
+| Breakpoint | Min Width | Target |
+|------------|-----------|--------|
+| `sm` | 640px | Tablets pequeños |
+| `md` | 768px | Tablets |
+| `lg` | 1024px | Laptops |
+| `xl` | 1280px | Desktops |
+| `2xl` | 1536px | Large screens |
+
+### Mobile First
+
+Todos los estilos se escriben mobile-first:
+
+```jsx
+<div className="text-sm md:text-base lg:text-lg">
+  Responsive text
+</div>
+```
+
+---
+
+## 🚀 Deployment
+
+### Build para Producción
+
 ```bash
 npm run build
 ```
 
-### Variables de Entorno en Producción
-Asegurar que todas las variables `VITE_*` estén configuradas en el servidor de producción.
+Genera archivos optimizados en `/dist`.
 
-### Opciones de Deploy
-- Vercel
-- Netlify
-- GitHub Pages
-- AWS S3 + CloudFront
-- Docker
+### Deploy en Vercel
 
-### Configuración Vercel
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite"
-}
+1. Instalar Vercel CLI:
+```bash
+npm i -g vercel
 ```
 
-### Configuración Netlify
-```toml
-[build]
-  command = "npm run build"
-  publish = "dist"
+2. Deploy:
+```bash
+vercel
+```
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+3. Configurar variables de entorno en Vercel dashboard.
+
+### Deploy en Netlify
+
+1. Conectar repositorio en Netlify
+2. Configurar build:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3. Configurar variables de entorno
+4. Deploy automático en cada push
+
+### Deploy con Docker
+
+```dockerfile
+FROM node:18-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ---
 
-## Flujo de Autenticación
+## 🧪 Testing (Próximamente)
 
-### Login
-1. Usuario ingresa credenciales
-2. Request a `/api/auth/login`
-3. Recibe token JWT
-4. Guarda token en localStorage
-5. Actualiza contexto de autenticación
-6. Redirect a `/chat`
+### Unit Tests
 
-### Registro
-1. Usuario completa formulario
-2. Validación client-side
-3. Request a `/api/auth/register`
-4. Recibe token JWT
-5. Auto-login
-6. Redirect a `/chat`
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom
+```
 
-### Logout
-1. Usuario hace clic en logout
-2. Request a `/api/auth/logout`
-3. Elimina token de localStorage
-4. Limpia contexto de autenticación
-5. Redirect a `/login`
+### E2E Tests
 
-### Protección de Rutas
-- Componente `PrivateRoute` verifica autenticación
-- Si no está autenticado, redirect a `/login`
-- Si está autenticado, renderiza componente
+```bash
+npm install -D cypress
+```
 
 ---
 
-## Flujo de Chat
+## 🤝 Contribuir
 
-### Enviar Mensaje de Texto
-1. Usuario escribe mensaje
-2. Click en enviar
-3. Muestra mensaje en UI inmediatamente
-4. Request a `/api/gemini/text`
-5. Muestra indicador de "escribiendo"
-6. Recibe respuesta
-7. Agrega respuesta a la UI
-8. Guarda conversación en backend
+### Cómo Contribuir
 
-### Upload de Imagen
-1. Usuario selecciona imagen
-2. Preview local de la imagen
-3. Validación de tipo y tamaño
-4. FormData con imagen y prompt
-5. Request a `/api/gemini/image`
-6. Muestra indicador de procesamiento
-7. Recibe análisis de imagen
-8. Muestra resultado en chat
+1. **Fork** el repositorio
+2. Crea una **branch** para tu feature:
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+3. **Commit** tus cambios:
+   ```bash
+   git commit -m 'Add some AmazingFeature'
+   ```
+4. **Push** a tu branch:
+   ```bash
+   git push origin feature/AmazingFeature
+   ```
+5. Abre un **Pull Request**
 
-### Grabación de Voz
-1. Usuario hace clic en micrófono
-2. Solicita permisos de micrófono
-3. Inicia grabación
-4. Muestra indicador de grabación activa
-5. Usuario detiene grabación
-6. Convierte audio a formato compatible
-7. Request a `/api/gemini/voice`
-8. Transcripción y respuesta
-9. Muestra en chat
+### Coding Standards
 
----
-
-## Gestión de Conversaciones
-
-### Listar Conversaciones
-1. Request a `/api/conversations`
-2. Muestra lista en sidebar
-3. Click en conversación
-4. Carga mensajes de esa conversación
-5. Cambia contexto activo
-
-### Nueva Conversación
-1. Click en "Nueva Conversación"
-2. Request a `/api/conversations` (POST)
-3. Crea conversación vacía
-4. Redirect a nueva conversación
-5. Usuario puede empezar a chatear
-
-### Eliminar Conversación
-1. Click en botón eliminar
-2. Modal de confirmación
-3. Request a `/api/conversations/:id` (DELETE)
-4. Elimina de lista
-5. Si era la activa, redirect a `/chat`
-
----
-
-## Performance
-
-### Lazy Loading
-- Páginas cargadas bajo demanda
-- Componentes pesados con lazy loading
-- Imágenes con loading="lazy"
-
-### Virtualization
-- Lista de conversaciones virtualizada (react-window)
-- Lista de mensajes virtualizada para chats largos
-
-### Caching
-- Cache de conversaciones en memoria
-- Cache de respuestas en localStorage (opcional)
-- Cache HTTP con service workers (opcional)
-
-### Optimistic Updates
-- Actualización optimista de UI antes de confirmación del servidor
-- Rollback en caso de error
-
----
-
-## Accesibilidad
-
-### ARIA Labels
-- Todos los botones tienen aria-labels descriptivos
-- Inputs tienen labels asociados
-- Modales tienen aria-modal y role="dialog"
-
-### Keyboard Navigation
-- Tab navigation funcional
-- Enter para enviar mensajes
-- Esc para cerrar modales
-- Atajos de teclado para funciones comunes
-
-### Screen Readers
-- Textos alternativos en imágenes
-- Mensajes de estado para acciones
-- Estructura semántica HTML
-
-### Contraste
-- Ratios de contraste WCAG AA mínimo
-- Modo oscuro con contraste adecuado
-
----
-
-## Seguridad
-
-### XSS Prevention
-- Sanitización de inputs
-- Escape de contenido HTML
-- CSP headers
-
-### CSRF Protection
-- Tokens CSRF en formularios críticos
-- Validación de origen
-
-### Secure Storage
-- Tokens en localStorage (o httpOnly cookies si el backend lo soporta)
-- No almacenar datos sensibles en localStorage
-- Limpiar datos al logout
-
-### API Security
-- Tokens enviados en headers Authorization
-- Refresh tokens manejados automáticamente
-- Expiración de sesión
-
----
-
-## Monitoreo y Analytics
-
-### Error Tracking
-- Sentry para tracking de errores (opcional)
-- Console logs en desarrollo
-- Error boundaries
-
-### Analytics
-- Google Analytics (opcional)
-- Tracking de eventos importantes:
-  - Login/Registro
-  - Mensajes enviados
-  - Conversaciones creadas
-  - Errores
-
----
-
-## Buenas Prácticas
-
-### Componentes
-- Un componente por archivo
+- Usar ESLint y Prettier
+- Nombres descriptivos para variables y funciones
+- Comentarios en código complejo
 - Componentes pequeños y reutilizables
 - Props documentadas
-- Export default al final del archivo
+- Commits descriptivos
 
-### Hooks
-- Custom hooks para lógica reutilizable
-- Prefijo "use" en nombres
-- Documentar dependencias
+### Commit Convention
 
-### Estado
-- Elevar estado solo cuando necesario
-- Context para estado global
-- Zustand para estado complejo (alternativa a Redux)
-
-### Styling
-- Tailwind para estilos
-- Componentes con clases utilitarias
-- Evitar inline styles
-- Sistema de diseño consistente
-
-### Code Organization
-- Imports ordenados (externos, internos, relativos)
-- Exportaciones centralizadas con index.js
-- Estructura de carpetas consistente
-
----
-
-## Comandos Útiles
-
-### Desarrollo
-```bash
-npm run dev                  # Iniciar servidor de desarrollo
-npm run build               # Build para producción
-npm run preview             # Preview del build
-npm run lint                # Ejecutar linter
-npm run lint:fix            # Corregir errores de linting
-npm run format              # Formatear código con Prettier
-npm run format:check        # Verificar formateo
 ```
-
-### Limpieza
-```bash
-rm -rf node_modules dist    # Limpiar dependencias y build
-npm install                 # Reinstalar dependencias
+feat: Nueva característica
+fix: Corrección de bug
+docs: Cambios en documentación
+style: Cambios de formato (no afectan código)
+refactor: Refactorización de código
+test: Agregar o modificar tests
+chore: Tareas de mantenimiento
 ```
 
 ---
 
-## Troubleshooting
+## 📄 Licencia
 
-### Puerto ocupado
-Si el puerto 5173 está ocupado:
-```bash
-# Cambiar puerto en vite.config.js
-server: {
-  port: 3000
-}
-```
-
-### CORS errors
-Verificar configuración de proxy en `vite.config.js` y configuración CORS en el servidor.
-
-### Build errors
-- Verificar variables de entorno
-- Limpiar node_modules y reinstalar
-- Verificar versiones de dependencias
-
-### Imports no resueltos
-Verificar configuración de aliases en `jsconfig.json` y `vite.config.js`.
+Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
 
 ---
 
-## Recursos Adicionales
+## 👥 Autores
 
-### Documentación Oficial
-- React: https://react.dev
-- Vite: https://vitejs.dev
-- React Router: https://reactrouter.com
-- Tailwind CSS: https://tailwindcss.com
-- Axios: https://axios-http.com
+**Tecnológico Nacional de México - Campus Ensenada**
 
-### Librerías Útiles
-- lucide-react: Iconos
-- react-hot-toast: Notificaciones
-- zustand: Estado global
-- date-fns: Manejo de fechas
-- clsx + tailwind-merge: Clases condicionales
-
-### Componentes UI (Opcional)
-- shadcn/ui: https://ui.shadcn.com
-- Headless UI: https://headlessui.com
-- Radix UI: https://www.radix-ui.com
+- Website: [https://ensenada.tecnm.mx](https://ensenada.tecnm.mx)
+- Email: soporte@ensenada.tecnm.mx
 
 ---
 
-## Próximos Pasos
+## 🙏 Agradecimientos
 
-1. Implementar API client con Axios
-2. Crear sistema de autenticación completo
-3. Implementar Context API para estado global
-4. Crear componentes comunes reutilizables
-5. Implementar páginas principales
-6. Crear componentes de chat
-7. Implementar sistema de rutas
-8. Integrar con API del servidor
-9. Optimizar performance
-10. Testing y debugging
-11. Deploy a producción
+- [Google Gemini AI](https://ai.google.dev/) - IA generativa
+- [React Team](https://react.dev/) - Framework UI
+- [Vite Team](https://vitejs.dev/) - Build tool
+- [Tailwind Labs](https://tailwindcss.com/) - CSS framework
+- [Vercel](https://vercel.com/) - Hosting y deployment
+- Comunidad TecNM Campus Ensenada
 
 ---
 
-## Notas Importantes
+## 📞 Soporte
 
-### Variables de Entorno
-- Todas las variables deben empezar con `VITE_`
-- NO subir archivo `.env` al repositorio
-- Crear `.env.example` con ejemplos
+¿Necesitas ayuda? Contacta con nosotros:
 
-### Compatibilidad
-- Node.js >= 16
-- NPM >= 8
-- Navegadores modernos (Chrome, Firefox, Safari, Edge)
+- 📧 Email: soporte@ensenada.tecnm.mx
+- 📱 Teléfono: +52 (646) 123-4567
+- 🌐 Website: [https://ensenada.tecnm.mx](https://ensenada.tecnm.mx)
+- 💬 Issues: [GitHub Issues](https://github.com/tu-usuario/gemini-chat-tecnm/issues)
 
-### Performance
-- Build size objetivo: < 500KB (gzipped)
-- First Contentful Paint: < 1.5s
-- Time to Interactive: < 3s
+---
 
-### Mantenimiento
-- Actualizar dependencias regularmente
-- Revisar vulnerabilidades: `npm audit`
-- Mantener documentación actualizada
-- Code reviews antes de merge
+## 🗺 Roadmap
+
+### v1.0 (Actual)
+- ✅ Autenticación de usuarios
+- ✅ Chat con Gemini AI
+- ✅ Modo oscuro
+- ✅ Responsive design
+- ✅ Sistema de constantes globalizado
+
+### v1.1 (Próximamente)
+- 🔄 Upload de archivos mejorado
+- 🔄 Grabación de voz
+- 🔄 Exportar conversaciones
+- 🔄 Búsqueda en conversaciones
+
+### v2.0 (Futuro)
+- 📅 Análisis de imágenes con IA
+- 📅 Procesamiento de PDFs
+- 📅 Comandos de voz
+- 📅 Integración con Google Workspace
+- 📅 Multi-idioma (Español/Inglés)
+- 📅 Modo offline
+
+---
+
+<div align="center">
+
+**⭐ Si te gusta este proyecto, dale una estrella en GitHub ⭐**
+
+Hecho con ❤️ por el TecNM Campus Ensenada
+
+</div>
