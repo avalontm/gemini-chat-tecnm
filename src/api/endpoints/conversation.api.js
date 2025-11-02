@@ -1,8 +1,64 @@
 // src/api/endpoints/conversation.api.js
+
 import api from '../axios.config';
 
+/**
+ * Validar conversationId
+ * @param {string} conversationId 
+ * @returns {boolean}
+ */
+const isValidConversationId = (conversationId) => {
+  return conversationId && 
+         conversationId !== 'null' && 
+         conversationId !== 'undefined' &&
+         typeof conversationId === 'string' &&
+         conversationId.trim().length > 0;
+};
+
+/**
+ * Normalizar ID de conversación (soporta id y _id)
+ * @param {object} conversation 
+ * @returns {string}
+ */
+const getConversationId = (conversation) => {
+  return conversation?.id || conversation?._id;
+};
+
+/**
+ * Manejo centralizado de errores
+ * @param {Error} error 
+ * @param {string} context 
+ */
+const handleAPIError = (error, context) => {
+  console.error(`[CONVERSATION API] Error en ${context}:`, error);
+  
+  if (error.response) {
+    const status = error.response.status;
+    const message = error.response.data?.message || error.message;
+    
+    switch (status) {
+      case 401:
+        console.error('[CONVERSATION API] No autenticado - Token expirado o inválido');
+        break;
+      case 403:
+        console.error('[CONVERSATION API] No autorizado - Acceso denegado');
+        break;
+      case 404:
+        console.error('[CONVERSATION API] Recurso no encontrado');
+        break;
+      case 500:
+        console.error('[CONVERSATION API] Error del servidor');
+        break;
+      default:
+        console.error('[CONVERSATION API] Error:', status, message);
+    }
+  }
+  
+  throw error;
+};
+
 // API de conversaciones
-export const conversationAPI = {
+const conversationAPI = {
   /**
    * Obtener todas las conversaciones del usuario
    * @param {number} page - Numero de pagina
@@ -11,13 +67,16 @@ export const conversationAPI = {
    */
   getConversations: async (page = 1, limit = 50) => {
     try {
+      console.log('[CONVERSATION API] Obteniendo conversaciones', { page, limit });
+      
       const response = await api.get('/api/conversations', {
         params: { page, limit },
       });
       
+      console.log('[CONVERSATION API] Conversaciones obtenidas:', response.data?.length || 0);
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'getConversations');
     }
   },
 
@@ -27,12 +86,21 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con datos de la conversacion
    */
   getConversation: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] getConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Obteniendo conversación:', conversationId);
+      
       const response = await api.get(`/api/conversations/${conversationId}`);
       
+      console.log('[CONVERSATION API] Conversación obtenida:', getConversationId(response.data.conversation));
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'getConversation');
     }
   },
 
@@ -44,14 +112,24 @@ export const conversationAPI = {
    */
   createConversation: async (title = null, firstMessage = null) => {
     try {
-      const response = await api.post('/api/conversations', {
-        title,
-        firstMessage,
-      });
+      console.log('[CONVERSATION API] Creando conversación', { title, firstMessage: !!firstMessage });
       
+      const payload = {};
+      
+      if (title && title.trim().length > 0) {
+        payload.title = title.trim();
+      }
+      
+      if (firstMessage && firstMessage.trim().length > 0) {
+        payload.firstMessage = firstMessage.trim();
+      }
+      
+      const response = await api.post('/api/conversations', payload);
+      
+      console.log('[CONVERSATION API] Conversación creada:', getConversationId(response.data.conversation));
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'createConversation');
     }
   },
 
@@ -62,14 +140,29 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con conversacion actualizada
    */
   updateConversation: async (conversationId, title) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] updateConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
+    if (!title || title.trim().length === 0) {
+      const error = new Error('El título no puede estar vacío');
+      console.error('[CONVERSATION API] updateConversation - Título vacío');
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Actualizando conversación:', conversationId);
+      
       const response = await api.put(`/api/conversations/${conversationId}`, {
-        title,
+        title: title.trim(),
       });
       
+      console.log('[CONVERSATION API] Conversación actualizada');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'updateConversation');
     }
   },
 
@@ -79,12 +172,21 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con confirmacion
    */
   deleteConversation: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] deleteConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Eliminando conversación:', conversationId);
+      
       const response = await api.delete(`/api/conversations/${conversationId}`);
       
+      console.log('[CONVERSATION API] Conversación eliminada');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'deleteConversation');
     }
   },
 
@@ -96,14 +198,23 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con mensajes
    */
   getMessages: async (conversationId, page = 1, limit = 50) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] getMessages - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Obteniendo mensajes:', { conversationId, page, limit });
+      
       const response = await api.get(`/api/conversations/${conversationId}/messages`, {
         params: { page, limit },
       });
       
+      console.log('[CONVERSATION API] Mensajes obtenidos:', response.data?.length || 0);
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'getMessages');
     }
   },
 
@@ -115,15 +226,36 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con mensaje creado
    */
   addMessage: async (conversationId, content, role = 'user') => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] addMessage - ID inválido:', conversationId);
+      throw error;
+    }
+
+    if (!content || content.trim().length === 0) {
+      const error = new Error('El contenido del mensaje no puede estar vacío');
+      console.error('[CONVERSATION API] addMessage - Contenido vacío');
+      throw error;
+    }
+
+    if (role !== 'user' && role !== 'assistant') {
+      const error = new Error('Rol inválido. Debe ser "user" o "assistant"');
+      console.error('[CONVERSATION API] addMessage - Rol inválido:', role);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Agregando mensaje:', { conversationId, role });
+      
       const response = await api.post(`/api/conversations/${conversationId}/messages`, {
-        content,
+        content: content.trim(),
         role,
       });
       
+      console.log('[CONVERSATION API] Mensaje agregado');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'addMessage');
     }
   },
 
@@ -134,14 +266,29 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con confirmacion
    */
   deleteMessage: async (conversationId, messageId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] deleteMessage - conversationId inválido:', conversationId);
+      throw error;
+    }
+
+    if (!isValidConversationId(messageId)) {
+      const error = new Error('ID de mensaje inválido');
+      console.error('[CONVERSATION API] deleteMessage - messageId inválido:', messageId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Eliminando mensaje:', { conversationId, messageId });
+      
       const response = await api.delete(
         `/api/conversations/${conversationId}/messages/${messageId}`
       );
       
+      console.log('[CONVERSATION API] Mensaje eliminado');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'deleteMessage');
     }
   },
 
@@ -153,14 +300,27 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con resultados de busqueda
    */
   searchConversations: async (query, page = 1, limit = 20) => {
+    if (!query || query.trim().length === 0) {
+      const error = new Error('La búsqueda no puede estar vacía');
+      console.error('[CONVERSATION API] searchConversations - Query vacío');
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Buscando conversaciones:', query);
+      
       const response = await api.get('/api/conversations/search', {
-        params: { query, page, limit },
+        params: { 
+          query: query.trim(), 
+          page, 
+          limit 
+        },
       });
       
+      console.log('[CONVERSATION API] Resultados encontrados:', response.data?.length || 0);
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'searchConversations');
     }
   },
 
@@ -170,12 +330,21 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con confirmacion
    */
   archiveConversation: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] archiveConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Archivando conversación:', conversationId);
+      
       const response = await api.post(`/api/conversations/${conversationId}/archive`);
       
+      console.log('[CONVERSATION API] Conversación archivada');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'archiveConversation');
     }
   },
 
@@ -185,12 +354,21 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con confirmacion
    */
   unarchiveConversation: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] unarchiveConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Desarchivando conversación:', conversationId);
+      
       const response = await api.post(`/api/conversations/${conversationId}/unarchive`);
       
+      console.log('[CONVERSATION API] Conversación desarchivada');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'unarchiveConversation');
     }
   },
 
@@ -202,13 +380,16 @@ export const conversationAPI = {
    */
   getArchivedConversations: async (page = 1, limit = 50) => {
     try {
+      console.log('[CONVERSATION API] Obteniendo conversaciones archivadas', { page, limit });
+      
       const response = await api.get('/api/conversations/archived', {
         params: { page, limit },
       });
       
+      console.log('[CONVERSATION API] Conversaciones archivadas obtenidas:', response.data?.length || 0);
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'getArchivedConversations');
     }
   },
 
@@ -218,12 +399,21 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con confirmacion
    */
   favoriteConversation: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] favoriteConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Marcando como favorita:', conversationId);
+      
       const response = await api.post(`/api/conversations/${conversationId}/favorite`);
       
+      console.log('[CONVERSATION API] Conversación marcada como favorita');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'favoriteConversation');
     }
   },
 
@@ -233,12 +423,21 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con confirmacion
    */
   unfavoriteConversation: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] unfavoriteConversation - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Quitando de favoritos:', conversationId);
+      
       const response = await api.delete(`/api/conversations/${conversationId}/favorite`);
       
+      console.log('[CONVERSATION API] Conversación quitada de favoritos');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'unfavoriteConversation');
     }
   },
 
@@ -250,13 +449,16 @@ export const conversationAPI = {
    */
   getFavoriteConversations: async (page = 1, limit = 50) => {
     try {
+      console.log('[CONVERSATION API] Obteniendo conversaciones favoritas', { page, limit });
+      
       const response = await api.get('/api/conversations/favorites', {
         params: { page, limit },
       });
       
+      console.log('[CONVERSATION API] Conversaciones favoritas obtenidas:', response.data?.length || 0);
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'getFavoriteConversations');
     }
   },
 
@@ -266,14 +468,23 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con archivo PDF
    */
   exportToPDF: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] exportToPDF - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Exportando a PDF:', conversationId);
+      
       const response = await api.get(`/api/conversations/${conversationId}/export/pdf`, {
         responseType: 'blob',
       });
       
+      console.log('[CONVERSATION API] PDF generado');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'exportToPDF');
     }
   },
 
@@ -283,14 +494,23 @@ export const conversationAPI = {
    * @returns {Promise} - Promise con archivo TXT
    */
   exportToTXT: async (conversationId) => {
+    if (!isValidConversationId(conversationId)) {
+      const error = new Error('ID de conversación inválido');
+      console.error('[CONVERSATION API] exportToTXT - ID inválido:', conversationId);
+      throw error;
+    }
+
     try {
+      console.log('[CONVERSATION API] Exportando a TXT:', conversationId);
+      
       const response = await api.get(`/api/conversations/${conversationId}/export/txt`, {
         responseType: 'blob',
       });
       
+      console.log('[CONVERSATION API] TXT generado');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'exportToTXT');
     }
   },
 
@@ -300,13 +520,18 @@ export const conversationAPI = {
    */
   getStats: async () => {
     try {
+      console.log('[CONVERSATION API] Obteniendo estadísticas');
+      
       const response = await api.get('/api/conversations/stats');
       
+      console.log('[CONVERSATION API] Estadísticas obtenidas');
       return response;
     } catch (error) {
-      throw error;
+      handleAPIError(error, 'getStats');
     }
   },
 };
 
+// Exportar tanto como named export como default export
+export { conversationAPI };
 export default conversationAPI;

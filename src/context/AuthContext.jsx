@@ -1,10 +1,10 @@
 // src/context/AuthContext.jsx
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '@api/axios.config';
 import toast from 'react-hot-toast';
 import { API_CONFIG } from '@config/api.config';
-import { APP_CONFIG, getStorageKey } from '@config/app.config';
+import { getStorageKey } from '@config/app.config';
 
 const AuthContext = createContext(undefined);
 
@@ -26,11 +26,11 @@ export const AuthProvider = ({ children }) => {
           setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
 
-          // Verificar token con el servidor
-          await verifyToken(storedToken);
+          // Verificar token con el servidor (opcional)
+          // await verifyToken(storedToken);
         }
       } catch (error) {
-        console.error('Error inicializando autenticacion:', error);
+        console.error('[AUTH] Error inicializando autenticacion:', error);
         logout();
       } finally {
         setLoading(false);
@@ -43,14 +43,11 @@ export const AuthProvider = ({ children }) => {
   // Verificar token con el servidor
   const verifyToken = async (tokenToVerify) => {
     try {
-      const response = await axios.get(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.verifyToken}`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenToVerify}`,
-          },
-        }
-      );
+      const response = await api.get(API_CONFIG.endpoints.auth.verifyToken, {
+        headers: {
+          Authorization: `Bearer ${tokenToVerify}`,
+        },
+      });
 
       if (response.data.valid) {
         return true;
@@ -59,7 +56,7 @@ export const AuthProvider = ({ children }) => {
         return false;
       }
     } catch (error) {
-      console.error('Error verificando token:', error);
+      console.error('[AUTH] Error verificando token:', error);
       logout();
       return false;
     }
@@ -70,23 +67,26 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.login}`,
-        { email, password },
-        {
-          headers: API_CONFIG.headers,
-          timeout: API_CONFIG.timeout,
-        }
+      const response = await api.post(
+        API_CONFIG.endpoints.auth.login,
+        { email, password }
       );
 
-      const { token: newToken, user: newUser } = response.data;
+      console.log('[AUTH] Response completa:', response.data);
 
-      // Guardar en estado
-      setToken(newToken);
-      setUser(newUser);
-      setIsAuthenticated(true);
+      // El backend devuelve: { success, message, data: { token, user } }
+      // Extraer token y user del objeto data
+      const responseData = response.data.data || response.data;
+      const { token: newToken, user: newUser } = responseData;
 
-      // Guardar en localStorage
+      console.log('[AUTH] Token extraido:', newToken?.substring(0, 20) + '...');
+      console.log('[AUTH] User extraido:', newUser);
+
+      if (!newToken || !newUser) {
+        throw new Error('Token o usuario no encontrado en la respuesta');
+      }
+
+      // IMPORTANTE: Guardar en localStorage PRIMERO
       localStorage.setItem(getStorageKey('token'), newToken);
       localStorage.setItem(getStorageKey('user'), JSON.stringify(newUser));
       
@@ -94,11 +94,19 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem(getStorageKey('rememberMe'), 'true');
       }
 
+      console.log('[AUTH] Token guardado en localStorage');
+      console.log('[AUTH] Verificando token guardado:', localStorage.getItem(getStorageKey('token'))?.substring(0, 20) + '...');
+
+      // Luego actualizar estado
+      setToken(newToken);
+      setUser(newUser);
+      setIsAuthenticated(true);
+
       toast.success('Inicio de sesion exitoso');
 
-      return { success: true, user: newUser };
+      return { success: true, user: newUser, token: newToken };
     } catch (error) {
-      console.error('Error en login:', error);
+      console.error('[AUTH] Error en login:', error);
       
       const errorMessage = 
         error.response?.data?.message || 
@@ -118,31 +126,33 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.register}`,
-        { username, email, password },
-        {
-          headers: API_CONFIG.headers,
-          timeout: API_CONFIG.timeout,
-        }
+      const response = await api.post(
+        API_CONFIG.endpoints.auth.register,
+        { username, email, password }
       );
 
-      const { token: newToken, user: newUser } = response.data;
+      // El backend devuelve: { success, message, data: { token, user } }
+      const responseData = response.data.data || response.data;
+      const { token: newToken, user: newUser } = responseData;
 
-      // Guardar en estado
-      setToken(newToken);
-      setUser(newUser);
-      setIsAuthenticated(true);
+      if (!newToken || !newUser) {
+        throw new Error('Token o usuario no encontrado en la respuesta');
+      }
 
       // Guardar en localStorage
       localStorage.setItem(getStorageKey('token'), newToken);
       localStorage.setItem(getStorageKey('user'), JSON.stringify(newUser));
 
+      // Actualizar estado
+      setToken(newToken);
+      setUser(newUser);
+      setIsAuthenticated(true);
+
       toast.success('Registro exitoso');
 
       return { success: true, user: newUser };
     } catch (error) {
-      console.error('Error en registro:', error);
+      console.error('[AUTH] Error en registro:', error);
       
       const errorMessage = 
         error.response?.data?.message || 
@@ -162,19 +172,10 @@ export const AuthProvider = ({ children }) => {
     try {
       // Intentar hacer logout en el servidor
       if (token) {
-        await axios.post(
-          `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.logout}`,
-          {},
-          {
-            headers: {
-              ...API_CONFIG.headers,
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await api.post(API_CONFIG.endpoints.auth.logout);
       }
     } catch (error) {
-      console.error('Error en logout:', error);
+      console.error('[AUTH] Error en logout:', error);
     } finally {
       // Limpiar estado
       setUser(null);
@@ -194,23 +195,18 @@ export const AuthProvider = ({ children }) => {
   // Obtener perfil del usuario
   const getProfile = async () => {
     try {
-      const response = await axios.get(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.profile}`,
-        {
-          headers: {
-            ...API_CONFIG.headers,
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.get(API_CONFIG.endpoints.auth.profile);
 
-      const updatedUser = response.data.user;
+      // Manejar respuesta del backend
+      const responseData = response.data.data || response.data;
+      const updatedUser = responseData.user || responseData;
+      
       setUser(updatedUser);
       localStorage.setItem(getStorageKey('user'), JSON.stringify(updatedUser));
 
       return { success: true, user: updatedUser };
     } catch (error) {
-      console.error('Error obteniendo perfil:', error);
+      console.error('[AUTH] Error obteniendo perfil:', error);
       
       const errorMessage = 
         error.response?.data?.message || 
@@ -230,22 +226,16 @@ export const AuthProvider = ({ children }) => {
   // Cambiar contraseña
   const changePassword = async (currentPassword, newPassword) => {
     try {
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.changePassword}`,
-        { currentPassword, newPassword },
-        {
-          headers: {
-            ...API_CONFIG.headers,
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await api.post(
+        API_CONFIG.endpoints.auth.changePassword,
+        { currentPassword, newPassword }
       );
 
       toast.success('Contraseña actualizada exitosamente');
 
       return { success: true, message: response.data.message };
     } catch (error) {
-      console.error('Error cambiando contraseña:', error);
+      console.error('[AUTH] Error cambiando contraseña:', error);
       
       const errorMessage = 
         error.response?.data?.message || 
@@ -260,19 +250,16 @@ export const AuthProvider = ({ children }) => {
   // Solicitar reset de contraseña
   const forgotPassword = async (email) => {
     try {
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.forgotPassword}`,
-        { email },
-        {
-          headers: API_CONFIG.headers,
-        }
+      const response = await api.post(
+        API_CONFIG.endpoints.auth.forgotPassword,
+        { email }
       );
 
       toast.success('Se ha enviado un correo para restablecer tu contraseña');
 
       return { success: true, message: response.data.message };
     } catch (error) {
-      console.error('Error en forgot password:', error);
+      console.error('[AUTH] Error en forgot password:', error);
       
       const errorMessage = 
         error.response?.data?.message || 
@@ -287,19 +274,16 @@ export const AuthProvider = ({ children }) => {
   // Resetear contraseña con token
   const resetPassword = async (resetToken, newPassword) => {
     try {
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.resetPassword}`,
-        { token: resetToken, newPassword },
-        {
-          headers: API_CONFIG.headers,
-        }
+      const response = await api.post(
+        API_CONFIG.endpoints.auth.resetPassword,
+        { token: resetToken, newPassword }
       );
 
       toast.success('Contraseña restablecida exitosamente');
 
       return { success: true, message: response.data.message };
     } catch (error) {
-      console.error('Error en reset password:', error);
+      console.error('[AUTH] Error en reset password:', error);
       
       const errorMessage = 
         error.response?.data?.message || 
@@ -314,12 +298,9 @@ export const AuthProvider = ({ children }) => {
   // Verificar email
   const verifyEmail = async (verificationToken) => {
     try {
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.verifyEmail}`,
-        { token: verificationToken },
-        {
-          headers: API_CONFIG.headers,
-        }
+      const response = await api.post(
+        API_CONFIG.endpoints.auth.verifyEmail,
+        { token: verificationToken }
       );
 
       toast.success('Email verificado exitosamente');
@@ -331,7 +312,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message: response.data.message };
     } catch (error) {
-      console.error('Error verificando email:', error);
+      console.error('[AUTH] Error verificando email:', error);
       
       const errorMessage = 
         error.response?.data?.message || 

@@ -1,5 +1,6 @@
 // src/api/axios.config.js
 import axios from 'axios';
+import { getStorageKey } from '@config/app.config';
 
 // Obtener configuracion desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -17,17 +18,22 @@ const api = axios.create({
 // Request interceptor - Agregar token a todas las peticiones
 api.interceptors.request.use(
   (config) => {
-    // Obtener token del localStorage
-    const token = localStorage.getItem('token');
+    // Obtener token del localStorage usando getStorageKey
+    const token = localStorage.getItem(getStorageKey('token'));
     
     // Si existe token, agregarlo al header Authorization
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    // Log en desarrollo
-    if (import.meta.env.DEV) {
-      console.log('Request:', config.method?.toUpperCase(), config.url);
+      
+      // Log en desarrollo
+      if (import.meta.env.DEV) {
+        console.log('[API-REQUEST] Token agregado -', config.method?.toUpperCase(), config.url);
+      }
+    } else {
+      // Log en desarrollo si no hay token
+      if (import.meta.env.DEV) {
+        console.warn('[API-REQUEST] No token -', config.method?.toUpperCase(), config.url);
+      }
     }
     
     return config;
@@ -35,7 +41,7 @@ api.interceptors.request.use(
   (error) => {
     // Log de error en desarrollo
     if (import.meta.env.DEV) {
-      console.error('Request Error:', error);
+      console.error('[API-REQUEST] Error:', error);
     }
     return Promise.reject(error);
   }
@@ -44,71 +50,67 @@ api.interceptors.request.use(
 // Response interceptor - Manejo de respuestas y errores
 api.interceptors.response.use(
   (response) => {
-    // Log en desarrollo
+    // Log en desarrollo - IMPORTANTE: Ver la estructura completa
     if (import.meta.env.DEV) {
-      console.log('Response:', response.status, response.config.url);
+      console.log('[API-RESPONSE] Status:', response.status, 'URL:', response.config.url);
+      console.log('[API-RESPONSE] Full response:', response);
+      console.log('[API-RESPONSE] response.data:', response.data);
     }
     
-    // Retornar solo la data de la respuesta
-    return response.data;
+    // IMPORTANTE: Retornar la respuesta completa, NO solo response.data
+    // Esto es necesario para mantener compatibilidad con el código existente
+    return response;
   },
   (error) => {
     // Log de error en desarrollo
     if (import.meta.env.DEV) {
-      console.error('Response Error:', error.response?.status, error.config?.url);
+      console.error('[API-ERROR] Status:', error.response?.status, 'URL:', error.config?.url);
+      console.error('[API-ERROR] Error details:', error.response?.data);
+      console.error('[API-ERROR] Full error:', error);
     }
     
     // Manejar errores especificos
     if (error.response) {
-      // El servidor respondio con un codigo de estado fuera del rango 2xx
       const { status, data } = error.response;
       
       switch (status) {
         case 401:
-          // Token invalido o expirado - Limpiar sesion y redirigir a login
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          console.error('[API-ERROR] No autorizado - Limpiando sesion...');
+          localStorage.removeItem(getStorageKey('token'));
+          localStorage.removeItem(getStorageKey('user'));
+          localStorage.removeItem(getStorageKey('rememberMe'));
+          
+          // Solo redirigir si no estamos en login o register
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+            console.log('[API-ERROR] Redirigiendo a /login...');
+            window.location.href = '/login';
+          }
           break;
           
         case 403:
-          // Acceso prohibido
-          console.error('Acceso prohibido');
+          console.error('[API-ERROR] Acceso prohibido');
           break;
           
         case 404:
-          // Recurso no encontrado
-          console.error('Recurso no encontrado');
+          console.error('[API-ERROR] Recurso no encontrado');
           break;
           
         case 500:
-          // Error del servidor
-          console.error('Error del servidor');
+          console.error('[API-ERROR] Error del servidor');
           break;
           
         default:
-          console.error('Error:', data?.message || 'Error desconocido');
+          console.error('[API-ERROR] Error:', data?.message || 'Error desconocido');
       }
-      
-      // Retornar error con mensaje personalizado
-      return Promise.reject({
-        status,
-        message: data?.message || 'Error en la peticion',
-        errors: data?.errors || null,
-      });
     } else if (error.request) {
-      // La peticion fue hecha pero no hubo respuesta
-      return Promise.reject({
-        status: 0,
-        message: 'No hay conexion con el servidor',
-      });
+      console.error('[API-ERROR] No hay conexion con el servidor');
     } else {
-      // Algo paso al configurar la peticion
-      return Promise.reject({
-        status: 0,
-        message: error.message || 'Error al realizar la peticion',
-      });
+      console.error('[API-ERROR] Error al realizar la peticion:', error.message);
     }
+    
+    // Retornar el error original
+    return Promise.reject(error);
   }
 );
 

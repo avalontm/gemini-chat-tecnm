@@ -2,24 +2,17 @@
 
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { ThemeProvider, AssistantProvider } from '@context';
-import { AppRoutes } from './routes';
-import ThemeToggle from './components/common/ThemeToggle';
-import InteractiveAssistant from './components/common/AssistantWidget/InteractiveAssistant';
-import AssistantToggleButton from './components/common/AssistantToggleButton';
+import { AuthProvider } from '@context/AuthContext';
+import { ThemeProvider } from '@context/ThemeContext';
+import AppRoutes from '@routes/AppRoutes';
 
 function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter>
       <ThemeProvider>
-        <AssistantProvider>
-          <div className="fixed top-4 right-4 z-50">
-            <ThemeToggle />
-          </div>
-
+        <AuthProvider>
           <AppRoutes />
-
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
               duration: 3000,
@@ -41,9 +34,7 @@ function App() {
               },
             }}
           />
-
-          <InteractiveAssistant />
-        </AssistantProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );
