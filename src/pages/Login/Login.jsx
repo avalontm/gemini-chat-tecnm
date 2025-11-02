@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { LogIn, Mail, Lock, ArrowLeft, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@context/AuthContext';
 import { SITE_CONFIG } from '@config/constants';
@@ -50,9 +50,9 @@ function Login() {
     setIsLoading(true);
 
     try {
-      console.log('🔐 [LOGIN] Iniciando proceso de login...');
-      console.log('📧 Email:', formData.email);
-      console.log('🔒 Remember Me:', formData.rememberMe);
+      console.log('[LOGIN] Iniciando proceso de login...');
+      console.log('Email:', formData.email);
+      console.log('Remember Me:', formData.rememberMe);
       
       // Llamar al login del AuthContext
       const result = await login(
@@ -61,12 +61,12 @@ function Login() {
         formData.rememberMe
       );
 
-      console.log('📥 [LOGIN] Resultado recibido:', result);
+      console.log('[LOGIN] Resultado recibido:', result);
 
       // Verificar si el login fue exitoso
       if (result && result.success) {
-        console.log('✅ [LOGIN] Login exitoso!');
-        console.log('👤 Usuario:', result.user);
+        console.log('[LOGIN] Login exitoso!');
+        console.log('Usuario:', result.user);
         
         // Pequeño delay para asegurar que el estado se actualice
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -74,15 +74,15 @@ function Login() {
         // Verificar localStorage
         const storedToken = localStorage.getItem('gemini_chat_token');
         const storedUser = localStorage.getItem('gemini_chat_user');
-        console.log('💾 Token en localStorage:', storedToken ? '✓' : '✗');
-        console.log('💾 User en localStorage:', storedUser ? '✓' : '✗');
+        console.log('Token en localStorage:', storedToken ? 'SI' : 'NO');
+        console.log('User en localStorage:', storedUser ? 'SI' : 'NO');
         
         // Redirigir al chat
-        console.log('🔄 [LOGIN] Redirigiendo a /chat...');
+        console.log('[LOGIN] Redirigiendo a /chat...');
         navigate(SITE_CONFIG.routes.chat, { replace: true });
         
       } else {
-        console.error('❌ [LOGIN] Login falló');
+        console.error('[LOGIN] Login falló');
         console.error('Error:', result?.error);
         
         // Si el resultado no tiene success, mostrar error genérico
@@ -91,7 +91,7 @@ function Login() {
         }
       }
     } catch (error) {
-      console.error('💥 [LOGIN] Error inesperado:', error);
+      console.error('[LOGIN] Error inesperado:', error);
       console.error('Stack:', error.stack);
       toast.error('Error inesperado. Por favor, intenta de nuevo.');
     } finally {
@@ -103,12 +103,12 @@ function Login() {
   const isButtonDisabled = isLoading || authLoading;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-gray-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300 flex items-center justify-center p-4">
       
       {/* Botón de regresar */}
       <Link 
         to={SITE_CONFIG.routes.home}
-        className="absolute top-8 left-8 flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        className="absolute top-8 left-8 flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />
         <span>Volver al inicio</span>
@@ -118,17 +118,21 @@ function Login() {
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-gray-200 dark:border-slate-700 transition-all duration-300">
           
-          {/* Header */}
+          {/* Header con branding TecNM */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
-              <LogIn className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-100 to-blue-100 dark:from-red-900/30 dark:to-blue-900/30 rounded-full mb-4">
+              <GraduationCap className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {SITE_CONFIG.auth.login.title}
+              Iniciar Sesión
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              {SITE_CONFIG.auth.login.subtitle}
+              TecNM Campus Ensenada
             </p>
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm">
+              <Mail className="w-4 h-4" />
+              <span>Correo institucional</span>
+            </div>
           </div>
 
           {/* Formulario */}
@@ -140,7 +144,7 @@ function Login() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
-                {SITE_CONFIG.auth.login.emailLabel}
+                Correo electrónico
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -155,8 +159,8 @@ function Login() {
                   required
                   disabled={isButtonDisabled}
                   autoComplete="email"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder={SITE_CONFIG.auth.login.emailPlaceholder}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="al23760194@ite.edu.mx"
                 />
               </div>
             </div>
@@ -167,7 +171,7 @@ function Login() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
-                {SITE_CONFIG.auth.login.passwordLabel}
+                Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -182,8 +186,8 @@ function Login() {
                   required
                   disabled={isButtonDisabled}
                   autoComplete="current-password"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder={SITE_CONFIG.auth.login.passwordPlaceholder}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="••••••••"
                 />
               </div>
             </div>
@@ -197,7 +201,7 @@ function Login() {
                   checked={formData.rememberMe}
                   onChange={handleChange}
                   disabled={isButtonDisabled}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   Recordarme
@@ -205,9 +209,9 @@ function Login() {
               </label>
               <Link 
                 to="/forgot-password" 
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-sm text-red-600 dark:text-red-400 hover:underline"
               >
-                {SITE_CONFIG.auth.login.forgotPassword}
+                ¿Olvidaste tu contraseña?
               </Link>
             </div>
 
@@ -215,7 +219,7 @@ function Login() {
             <button
               type="submit"
               disabled={isButtonDisabled}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isButtonDisabled ? (
                 <>
@@ -223,7 +227,10 @@ function Login() {
                   <span>Iniciando sesión...</span>
                 </>
               ) : (
-                <span>{SITE_CONFIG.auth.login.submitButton}</span>
+                <>
+                  <LogIn className="w-5 h-5" />
+                  <span>Iniciar sesión</span>
+                </>
               )}
             </button>
           </form>
@@ -235,7 +242,7 @@ function Login() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-4 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">
-                {SITE_CONFIG.auth.login.noAccount}
+                ¿No tienes cuenta?
               </span>
             </div>
           </div>
@@ -244,25 +251,18 @@ function Login() {
           <div className="mt-6 text-center">
             <Link
               to={SITE_CONFIG.routes.register}
-              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              className="text-red-600 dark:text-red-400 hover:underline font-medium"
             >
-              {SITE_CONFIG.auth.login.registerLink}
+              Crear cuenta estudiantil
             </Link>
           </div>
         </div>
 
-        {/* Credenciales de prueba (solo para desarrollo) */}
-        {import.meta.env.DEV && (
-          <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <p className="text-xs text-yellow-800 dark:text-yellow-200 font-semibold mb-2">
-              🔧 Modo Desarrollo
-            </p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-300">
-              Email: avalontm21@gmail.com<br />
-              Password: Tu contraseña de prueba
-            </p>
-          </div>
-        )}
+        {/* Ayuda adicional */}
+        <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+          <p>¿Problemas para acceder?</p>
+          <p className="mt-1">Contacta a servicios escolares del TecNM Campus Ensenada</p>
+        </div>
       </div>
     </div>
   );

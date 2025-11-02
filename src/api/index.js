@@ -10,14 +10,17 @@ export * from './interceptors';
 export { authAPI } from './endpoints/auth.api';
 export { geminiAPI } from './endpoints/gemini.api';
 export { conversationAPI } from './endpoints/conversation.api';
+export { userAPI } from './endpoints/user.api';
 
 // Exportar como objeto default para importacion alternativa
 import { authAPI } from './endpoints/auth.api';
 import { geminiAPI } from './endpoints/gemini.api';
 import { conversationAPI } from './endpoints/conversation.api';
+import { userAPI } from './endpoints/user.api';
 
 export default {
   auth: authAPI,
   gemini: geminiAPI,
   conversation: conversationAPI,
+  user: userAPI,
 };

@@ -10,6 +10,8 @@ import Login from '@pages/Login';
 import Register from '@pages/Register';
 import Chat from '@pages/Chat';
 import Profile from '@pages/Profile';
+import Terms from '@pages/Terms';
+import Privacy from '@pages/Privacy';
 import NotFound from '@pages/NotFound';
 
 // Importar componente de protección
@@ -53,6 +55,10 @@ function AppRoutes() {
           )
         } 
       />
+
+      {/* Rutas de Información Legal - Públicas */}
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Rutas Protegidas */}
       <Route
