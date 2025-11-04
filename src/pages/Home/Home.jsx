@@ -145,39 +145,20 @@ function Home() {
       <div className="container mx-auto px-4 py-20">
         <div className="text-center max-w-5xl mx-auto">
           
-          {/* Logo y branding TecNM */}
+          {/* Logo ITE centrado - cambia según el tema */}
           <div className="flex flex-col items-center mb-8 animate-in fade-in slide-in-from-top-2 duration-700">
-            <div className="flex items-center gap-4 mb-6">
-              {/* Logo TecNM */}
-              <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-3 border-2 border-red-600 dark:border-red-500">
-                <img 
-                  src="/logo-tecnm.png" 
-                  alt="TecNM"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextElementSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="hidden w-full h-full items-center justify-center">
-                  <GraduationCap className="w-12 h-12 text-red-600 dark:text-red-500" />
-                </div>
-              </div>
-              
-              {/* Logo ITE */}
-              <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-3 border-2 border-blue-600 dark:border-blue-500">
-                <img 
-                  src="/logo-ite.png" 
-                  alt="Instituto Tecnológico de Ensenada"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextElementSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="hidden w-full h-full items-center justify-center">
-                  <BookOpen className="w-12 h-12 text-blue-600 dark:text-blue-500" />
-                </div>
+            <div className="w-32 h-32 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border-2 border-blue-600 dark:border-blue-500 mb-6">
+              <img 
+                src={theme === 'dark' ? '/ite_dark.svg' : '/ite_light.svg'}
+                alt="Instituto Tecnológico de Ensenada"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling.style.display = 'flex';
+                }}
+              />
+              <div className="hidden w-full h-full items-center justify-center">
+                <GraduationCap className="w-16 h-16 text-blue-600 dark:text-blue-500" />
               </div>
             </div>
 

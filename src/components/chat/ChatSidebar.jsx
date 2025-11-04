@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@context/ThemeContext';
 
 function LogoutDialog({ isOpen, onClose, onConfirm }) {
   if (!isOpen) return null;
@@ -87,6 +88,7 @@ function ChatSidebar({
   formatRelativeTime
 }) {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogoutClick = () => {
@@ -128,8 +130,21 @@ function ChatSidebar({
           <div className="p-4 border-b border-gray-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-5 h-5 text-white" />
+                {/* Logo que cambia según el tema - SIN BORDE */}
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                  <img 
+                    src={theme === 'dark' ? '/ite_dark.svg' : '/ite_light.svg'}
+                    alt="Instituto Tecnológico de Ensenada"
+                    className="w-10 h-10 object-contain"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'flex';
+                    }}
+                  />
+                  {/* Fallback icon */}
+                  <div className="hidden w-10 h-10 items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
                 </div>
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-white text-lg">Gemini Chat</h2>
@@ -223,12 +238,21 @@ function ChatSidebar({
           <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
             <div className="bg-white dark:bg-slate-700 rounded-xl p-3 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
-                  <User className="w-5 h-5 text-white" />
+                {/* Avatar del usuario con fallback */}
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {user?.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-white" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                    {user?.username || 'Usuario'}
+                    {user?.nombreCompleto || user?.username || 'Usuario'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {user?.email}

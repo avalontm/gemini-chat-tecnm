@@ -1,60 +1,83 @@
 // src/api/endpoints/auth.api.js
 import api from '../axios.config';
 
-// API de autenticacion
+// API de autenticación
 export const authAPI = {
   /**
    * Login de usuario
-   * @param {string} email - Email del usuario
+   * @param {string} numeroControlOrEmail - Número de control o email del usuario
    * @param {string} password - Contraseña del usuario
    * @returns {Promise} - Promise con datos del usuario y token
    */
-  login: async (email, password) => {
+  login: async (numeroControlOrEmail, password) => {
     try {
+      // Determinar si es número de control o email
+      const isNumeroControl = /^\d{8}$/.test(numeroControlOrEmail);
+      
       const response = await api.post('/api/auth/login', {
-        email,
+        ...(isNumeroControl 
+          ? { numeroControl: numeroControlOrEmail }
+          : { email: numeroControlOrEmail }
+        ),
         password,
       });
       
       // Guardar token y usuario en localStorage
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
       }
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+      if (response.data?.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       }
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
   },
 
   /**
-   * Registro de nuevo usuario
-   * @param {string} username - Nombre de usuario
-   * @param {string} email - Email del usuario
-   * @param {string} password - Contraseña del usuario
+   * Registro de nuevo usuario del TecNM
+   * @param {Object} userData - Datos del usuario
+   * @param {string} userData.numeroControl - Número de control (8 dígitos)
+   * @param {string} userData.password - Contraseña
+   * @param {string} userData.nombreCompleto - Nombre completo
+   * @param {string} userData.carrera - Carrera
+   * @param {number} userData.semestre - Semestre (1-12)
+   * @param {string} [userData.telefono] - Teléfono (opcional)
+   * @param {string} [userData.avatar] - Avatar en base64 (opcional)
    * @returns {Promise} - Promise con datos del usuario y token
    */
-  register: async (username, email, password) => {
+  register: async (userData) => {
     try {
-      const response = await api.post('/api/auth/register', {
-        username,
-        email,
-        password,
+      console.log('[authAPI] Registrando usuario...');
+      console.log('[authAPI] Datos:', {
+        numeroControl: userData.numeroControl,
+        nombreCompleto: userData.nombreCompleto,
+        carrera: userData.carrera,
+        semestre: userData.semestre,
+        telefono: userData.telefono || 'No proporcionado',
+        avatar: userData.avatar ? 'Presente' : 'No proporcionado',
       });
+
+      const response = await api.post('/api/auth/register', userData);
+      
+      console.log('[authAPI] Respuesta de registro:', response.data);
       
       // Guardar token y usuario en localStorage
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      if (response.data?.data?.token) {
+        localStorage.setItem('token', response.data.data.token);
+        console.log('[authAPI] Token guardado');
       }
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+      if (response.data?.data?.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        console.log('[authAPI] Usuario guardado');
       }
       
-      return response;
+      return response.data;
     } catch (error) {
+      console.error('[authAPI] Error en registro:', error);
+      console.error('[authAPI] Error response:', error.response?.data);
       throw error;
     }
   },
@@ -72,7 +95,7 @@ export const authAPI = {
       localStorage.removeItem('user');
       localStorage.removeItem('refreshToken');
       
-      return response;
+      return response.data;
     } catch (error) {
       // Limpiar localStorage incluso si falla la peticion
       localStorage.removeItem('token');
@@ -92,11 +115,11 @@ export const authAPI = {
       const response = await api.get('/api/auth/profile');
       
       // Actualizar datos del usuario en localStorage
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+      if (response.data?.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       }
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -105,19 +128,34 @@ export const authAPI = {
   /**
    * Actualizar perfil del usuario
    * @param {Object} data - Datos a actualizar
+   * @param {string} [data.nombreCompleto] - Nombre completo
+   * @param {string} [data.carrera] - Carrera
+   * @param {number} [data.semestre] - Semestre (1-12)
+   * @param {string} [data.telefono] - Teléfono (10 dígitos)
+   * @param {string} [data.avatar] - Avatar en base64
    * @returns {Promise} - Promise con datos actualizados
    */
   updateProfile: async (data) => {
     try {
-      const response = await api.put('/api/auth/profile', data);
+      console.log('[authAPI] Actualizando perfil...');
       
-      // Actualizar datos del usuario en localStorage
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+      // Asegurarse de NO enviar numeroControl ni email
+      const { numeroControl, email, ...updateData } = data;
+      
+      if (numeroControl !== undefined || email !== undefined) {
+        console.warn('[authAPI] Se intentó modificar campos inmutables (numeroControl/email), eliminándolos...');
       }
       
-      return response;
+      const response = await api.put('/api/auth/profile', updateData);
+      
+      // Actualizar datos del usuario en localStorage
+      if (response.data?.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
+      return response.data;
     } catch (error) {
+      console.error('[authAPI] Error al actualizar perfil:', error);
       throw error;
     }
   },
@@ -130,12 +168,12 @@ export const authAPI = {
    */
   changePassword: async (currentPassword, newPassword) => {
     try {
-      const response = await api.put('/api/auth/change-password', {
+      const response = await api.post('/api/auth/change-password', {
         currentPassword,
         newPassword,
       });
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -143,16 +181,21 @@ export const authAPI = {
 
   /**
    * Solicitar recuperacion de contraseña
-   * @param {string} email - Email del usuario
+   * @param {string} numeroControlOrEmail - Número de control o email
    * @returns {Promise} - Promise con confirmacion
    */
-  forgotPassword: async (email) => {
+  forgotPassword: async (numeroControlOrEmail) => {
     try {
+      const isNumeroControl = /^\d{8}$/.test(numeroControlOrEmail);
+      
       const response = await api.post('/api/auth/forgot-password', {
-        email,
+        ...(isNumeroControl 
+          ? { numeroControl: numeroControlOrEmail }
+          : { email: numeroControlOrEmail }
+        ),
       });
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -171,7 +214,7 @@ export const authAPI = {
         newPassword,
       });
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -188,7 +231,7 @@ export const authAPI = {
         token,
       });
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -206,11 +249,11 @@ export const authAPI = {
       });
       
       // Actualizar token en localStorage
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
       }
       
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -223,7 +266,7 @@ export const authAPI = {
   verifyToken: async () => {
     try {
       const response = await api.get('/api/auth/verify-token');
-      return response;
+      return response.data;
     } catch (error) {
       throw error;
     }

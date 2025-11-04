@@ -1,7 +1,31 @@
 // src/components/profile/ProfileTab.jsx
 
 import { useState, useRef, useEffect } from 'react';
-import { User, Mail, Save, Upload, X } from 'lucide-react';
+import { User, Mail, Save, Upload, X, GraduationCap, BookOpen, Phone } from 'lucide-react';
+
+const CARRERAS = [
+  'Ingeniería en Innovación Agrícola Sustentable',
+  'Ingeniería Electromecánica',
+  'Ingeniería Electrónica',
+  'Ingeniería en Gestión Empresarial',
+  'Ingeniería Industrial',
+  'Ingeniería Mecatrónica',
+  'Ingeniería en Sistemas Computacionales',
+  'Licenciatura en Administración',
+  'Ingeniería Industrial TecNM-Virtual',
+  'Ingeniería en Sistemas Computacionales TecNM-Virtual',
+  'Ingeniería Electromecánica en Playas de Rosarito',
+  'Ingeniería Industrial en Playas de Rosarito',
+  'Ingeniería en Sistemas Computacionales en Playas de Rosarito',
+  'Licenciatura en Administración en Playas de Rosarito',
+  'Ingeniería en Sistemas Computacionales en Tecate',
+  'Ingeniería Industrial en Tecate',
+  'Licenciatura en Administración en Tecate',
+  'Especialización en Industria Aeroespacial',
+  'Maestría en Ingeniería Aeroespacial',
+  'Maestría en Ciencias en Ingeniería Mecatrónica',
+  'Doctorado en Ciencias en Ingeniería Mecatrónica'
+];
 
 const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -9,13 +33,7 @@ const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef(null);
 
-  // CRITICAL FIX: Actualizar preview cuando cambie profileData.avatar
   useEffect(() => {
-    console.log('[ProfileTab] profileData.avatar cambió:', {
-      hasAvatar: !!profileData.avatar,
-      avatarLength: profileData.avatar?.length
-    });
-    
     if (profileData.avatar) {
       setAvatarPreview(profileData.avatar);
     }
@@ -24,20 +42,11 @@ const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // No enviar el email ya que no se puede modificar
-    const { email, ...dataToSave } = profileData;
+    const { email, numeroControl, ...dataToSave } = profileData;
     
-    console.log('[ProfileTab] Guardando perfil');
-    console.log('[ProfileTab] Datos a guardar:', Object.keys(dataToSave));
-    
-    try {
-      await onSave(dataToSave);
-    } catch (error) {
-      console.error('[ProfileTab] Error al guardar:', error);
-    }
+    await onSave(dataToSave);
   };
 
-  // Comprimir y redimensionar imagen
   const compressImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.8) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -103,11 +112,6 @@ const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
     try {
       const compressedBase64 = await compressImage(file, 400, 400, 0.8);
       
-      const sizeInBytes = (compressedBase64.length * 3) / 4;
-      const sizeInKB = sizeInBytes / 1024;
-      
-      console.log(`Imagen comprimida: ${sizeInKB.toFixed(2)} KB`);
-
       setAvatarPreview(compressedBase64);
       setProfileData({
         ...profileData,
@@ -160,7 +164,6 @@ const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
         </p>
       </div>
 
-      {/* Avatar */}
       <div className="p-6 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
         <div className="flex items-start gap-6">
           <div className="relative">
@@ -247,27 +250,28 @@ const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
         </div>
       </div>
 
-      {/* Formulario */}
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Nombre de usuario
+            Número de Control
           </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              value={profileData.username}
-              onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-              required
+              value={profileData.numeroControl}
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white opacity-60 cursor-not-allowed"
+              disabled
             />
           </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            El número de control no se puede modificar
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Email
+            Email Institucional
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -285,18 +289,80 @@ const ProfileTab = ({ profileData, setProfileData, onSave, isSaving }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Biografía
+            Nombre Completo
           </label>
-          <textarea
-            value={profileData.bio || ''}
-            onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-            rows="4"
-            className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-            placeholder="Cuéntanos sobre ti..."
-            maxLength="500"
-          />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
-            {profileData.bio?.length || 0}/500
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={profileData.nombreCompleto}
+              onChange={(e) => setProfileData({ ...profileData, nombreCompleto: e.target.value })}
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Carrera
+          </label>
+          <div className="relative">
+            <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <select
+              value={profileData.carrera}
+              onChange={(e) => setProfileData({ ...profileData, carrera: e.target.value })}
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
+            >
+              <option value="">Selecciona una carrera</option>
+              {CARRERAS.map((carrera) => (
+                <option key={carrera} value={carrera}>
+                  {carrera}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Semestre
+          </label>
+          <div className="relative">
+            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <select
+              value={profileData.semestre}
+              onChange={(e) => setProfileData({ ...profileData, semestre: parseInt(e.target.value) })}
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
+            >
+              {[...Array(12)].map((_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}° Semestre
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Teléfono
+          </label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="tel"
+              value={profileData.telefono || ''}
+              onChange={(e) => setProfileData({ ...profileData, telefono: e.target.value })}
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="10 dígitos"
+              maxLength="10"
+            />
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Opcional. Ejemplo: 6461234567
           </p>
         </div>
 

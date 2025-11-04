@@ -19,7 +19,7 @@ import {
 function Chat() {
   const navigate = useNavigate();
   const { conversationId } = useParams();
-  const { user, token, isAuthenticated } = useAuth();
+  const { user, token, isAuthenticated, logout } = useAuth();
 
   const abortControllerRef = useRef(null);
   const isCreatingConversationRef = useRef(false);
@@ -60,17 +60,17 @@ function Chat() {
       setIsStreaming(false);
     }
 
-    if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
-      loadConversation(conversationId);
-    } else {
-      setMessages([{
-        id: 'welcome',
-        type: 'ai',
-        content: 'Hola! Soy tu asistente de IA powered by Google Gemini. En que puedo ayudarte hoy?',
-        timestamp: new Date(),
-      }]);
-      setCurrentConversation(null);
-    }
+if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
+  loadConversation(conversationId);
+} else {
+  setMessages([{
+    id: 'welcome',
+    type: 'ai',
+    content: 'Saludos. Soy el sistema de asistencia con inteligencia artificial del Tecnológico Nacional de México, Campus Ensenada. Mi propósito es brindarte apoyo en consultas académicas, investigación, desarrollo de proyectos y orientación estudiantil. ¿En qué tema requiere asistencia?',
+    timestamp: new Date(),
+  }]);
+  setCurrentConversation(null);
+}
 
     return () => {
       if (abortControllerRef.current) {
@@ -571,6 +571,13 @@ function Chat() {
     }
   }, [isStreaming]);
 
+  // ==================== FUNCIÓN DE LOGOUT ====================
+
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate('/');
+  }, [logout, navigate]);
+
   // ==================== UTILIDADES ====================
 
   const formatTime = useCallback((date) => {
@@ -606,7 +613,8 @@ function Chat() {
         currentConversation={currentConversation}
         onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
-        user={user}
+        user={user} 
+        onLogout={handleLogout} 
         formatRelativeTime={formatRelativeTime}
       />
 
