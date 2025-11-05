@@ -83,12 +83,79 @@ function fixMalformedTable(content) {
   });
 }
 
+// Función para limpiar URLs mal formateadas
+function cleanMalformedUrls(content) {
+  // Limpiar URLs con %5D (] encoded) y otras malformaciones
+  // Patrón: url%5D(url) o url](url)
+  content = content.replace(/(https?:\/\/[^\s\)]+?)(?:%5D|\])\((https?:\/\/[^\s\)]+)\)/gi, '$1');
+  
+  // Limpiar URLs duplicadas en formato ![](url)](url)
+  content = content.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s\)]+?)\)\]\(\2\)/gi, '![$1]($2)');
+  
+  return content;
+}
+
+// Función para convertir URLs de imágenes en sintaxis Markdown
+function convertImageUrlsToMarkdown(content) {
+  // Primero limpiar URLs mal formateadas
+  content = cleanMalformedUrls(content);
+  
+  // NO convertir si ya está en formato Markdown: ![texto](url) o [texto](url)
+  const imageUrlRegex = /(?<!\]\()(?<!\()(?<!src=["'])(?<!href=["'])(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s\)]*)?)/gi;
+  
+  return content.replace(imageUrlRegex, (match, offset) => {
+    // Verificar que no esté precedido por sintaxis Markdown
+    const before = content.substring(Math.max(0, offset - 10), offset);
+    if (before.includes('](') || before.includes('![')) {
+      return match;
+    }
+    return `![Imagen](${match})`;
+  });
+}
+
+// Función para mejorar el formato de listas
+function improveListFormatting(content) {
+  const lines = content.split('\n');
+  const processedLines = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    
+    // Detectar listas con asteriscos sin espacio
+    if (line.match(/^\*[^\s*]/)) {
+      line = line.replace(/^\*/, '* ');
+    }
+    
+    // Detectar listas numeradas sin espacio
+    if (line.match(/^\d+\.[^\s]/)) {
+      line = line.replace(/^(\d+\.)/, '$1 ');
+    }
+    
+    // Detectar viñetas con guión sin espacio
+    if (line.match(/^-[^\s-]/)) {
+      line = line.replace(/^-/, '- ');
+    }
+    
+    processedLines.push(line);
+  }
+  
+  return processedLines.join('\n');
+}
+
 // Función para procesar y limpiar el contenido del mensaje
 function processMessageContent(content) {
   let processedContent = content;
   
+  // 1. Convertir URLs de imágenes a Markdown
+  processedContent = convertImageUrlsToMarkdown(processedContent);
+  
+  // 2. Mejorar formato de listas
+  processedContent = improveListFormatting(processedContent);
+  
+  // 3. Corregir tablas mal formateadas
   processedContent = fixMalformedTable(processedContent);
   
+  // 4. Detectar y formatear tablas sin separadores de Markdown
   const lines = processedContent.split('\n');
   let inTable = false;
   let tableLines = [];
@@ -108,9 +175,11 @@ function processMessageContent(content) {
         
         const columnCount = line.split('|').length - 1;
         const separator = '|' + Array(columnCount).fill('---').join('|') + '|';
+        tableLines.push(line);
         tableLines.push(separator);
+      } else {
+        tableLines.push(line);
       }
-      tableLines.push(line);
     } else {
       if (inTable && tableLines.length > 0) {
         processedLines.push(tableLines.join('\n'));
@@ -174,6 +243,57 @@ function MessageItem({ message, formatTime }) {
                   {children}
                 </code>
               );
+            },
+            
+            // Detectar URLs de texto plano y convertirlas en enlaces
+            text({ node, children }) {
+              if (typeof children !== 'string') return children;
+              
+              // Regex más específico que excluye URLs ya en formato Markdown
+              const urlRegex = /(?<!\]\()(?<!\[)(https?:\/\/[^\s\)]+?)(?=[\s,;.!?]|$)/g;
+              const parts = children.split(urlRegex);
+              
+              if (parts.length === 1) return children;
+              
+              return parts.map((part, index) => {
+                if (part && part.match(/^https?:\/\//)) {
+                  // No convertir si es una URL de imagen
+                  if (part.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i)) {
+                    return null;
+                  }
+                  return (
+                    <a
+                      key={index}
+                      href={part}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                    >
+                      {part}
+                      <ExternalLink className="w-3 h-3 inline" />
+                    </a>
+                  );
+                }
+                return part;
+              });
+            },
+            
+            // Cursor animado durante streaming
+            text({ children }) {
+              if (message.isStreaming && typeof children === 'string') {
+                return (
+                  <>
+                    {children}
+                    <span 
+                      className="inline-block w-1 h-4 ml-0.5 bg-blue-600 dark:bg-blue-400 align-middle"
+                      style={{ 
+                        animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' 
+                      }}
+                    />
+                  </>
+                );
+              }
+              return children;
             },
 
             pre({ children }) {

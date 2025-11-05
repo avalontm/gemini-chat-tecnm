@@ -346,7 +346,7 @@ function Chat() {
 
   // ==================== ENVIAR MENSAJE CON STREAMING ====================
 
-  const handleSendMessage = useCallback(async (messageContent) => {
+const handleSendMessage = useCallback(async (messageContent) => {
     console.log('='.repeat(50));
     console.log('[CHAT] handleSendMessage llamado');
     console.log('[CHAT] Contenido:', messageContent?.substring(0, 100));
@@ -366,7 +366,6 @@ function Chat() {
 
     const trimmedContent = messageContent?.trim() || '';
 
-    // ⭐ DEFINIR IDs AL INICIO - FUERA DEL TRY
     const userMessageId = `user-${Date.now()}`;
     const aiMessageId = `ai-${Date.now()}`;
 
@@ -385,6 +384,21 @@ function Chat() {
     const filesForRequest = [...selectedFiles];
     setSelectedFiles([]);
 
+    // TIMEOUT DE SEGURIDAD: Limpiar estados después de 5 minutos
+    const safetyTimeoutId = setTimeout(() => {
+      console.warn('[CHAT] TIMEOUT DE SEGURIDAD: Limpiando estados después de 5 minutos');
+      setIsStreaming(false);
+      setIsLoading(false);
+      
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === aiMessageId && msg.isStreaming
+            ? { ...msg, isStreaming: false }
+            : msg
+        )
+      );
+    }, 5 * 60 * 1000); // 5 minutos
+
     try {
       let convId = currentConversation?.id || currentConversation?._id;
       console.log('[CHAT] ConversationId inicial:', convId || 'NINGUNO');
@@ -395,6 +409,7 @@ function Chat() {
       };
 
       let placeholderAdded = false;
+      let completeCalled = false;
 
       const handleChunk = (chunk, accumulated) => {
         if (!placeholderAdded) {
@@ -420,8 +435,16 @@ function Chat() {
       };
 
       const handleComplete = (data) => {
+        if (completeCalled) {
+          console.warn('[CHAT] handleComplete ya fue llamado, ignorando llamada duplicada');
+          return;
+        }
+        completeCalled = true;
+        
         console.log('[CHAT] ========== handleComplete ==========');
         console.log('[CHAT] Data recibida:', data);
+        
+        clearTimeout(safetyTimeoutId);
         
         const { conversation, messageId } = data;
         
@@ -466,16 +489,17 @@ function Chat() {
         console.error('[CHAT] ========== handleError ==========');
         console.error('[CHAT] Error:', error);
         
+        clearTimeout(safetyTimeoutId);
+        
         setIsStreaming(false);
         setIsLoading(false);
         
-        // ⭐ MANEJO SEGURO: Actualizar mensaje con error
         setMessages(prev => 
           prev.map(msg => 
             msg.id === aiMessageId 
               ? { 
                   ...msg, 
-                  content: '❌ Error al generar respuesta. Por favor, intenta de nuevo.',
+                  content: 'Error al generar respuesta. Por favor, intenta de nuevo.',
                   isStreaming: false,
                   error: true
                 }
@@ -520,6 +544,20 @@ function Chat() {
           handleError,
           config
         );
+        
+        // FALLBACK: Si después de 2 segundos no se llamó handleComplete
+        setTimeout(() => {
+          if (!completeCalled && placeholderAdded) {
+            console.warn('[CHAT] FALLBACK: handleComplete no fue llamado, ejecutando manualmente');
+            handleComplete({
+              fullResponse: '',
+              conversationId: convId,
+              messageId: null,
+              conversation: currentConversation
+            });
+          }
+        }, 2000);
+        
       } else {
         console.log('[CHAT] Tipo: Texto plano');
         console.log('[CHAT] conversationId para texto:', convId || 'null');
@@ -532,6 +570,19 @@ function Chat() {
           handleError,
           config
         );
+        
+        // FALLBACK para texto también
+        setTimeout(() => {
+          if (!completeCalled && placeholderAdded) {
+            console.warn('[CHAT] FALLBACK: handleComplete no fue llamado, ejecutando manualmente');
+            handleComplete({
+              fullResponse: '',
+              conversationId: convId,
+              messageId: null,
+              conversation: currentConversation
+            });
+          }
+        }, 2000);
       }
 
     } catch (error) {
@@ -539,16 +590,17 @@ function Chat() {
       console.error('[CHAT] Error:', error);
       console.error('[CHAT] Error stack:', error.stack);
       
+      clearTimeout(safetyTimeoutId);
+      
       setIsStreaming(false);
       setIsLoading(false);
       
-      // ⭐ MANEJO SEGURO: El aiMessageId YA ESTÁ DEFINIDO
       setMessages(prev => 
         prev.map(msg => {
           if (msg.id === aiMessageId) {
             return {
               ...msg,
-              content: '❌ Error al procesar tu mensaje. Por favor, intenta de nuevo.',
+              content: 'Error al procesar tu mensaje. Por favor, intenta de nuevo.',
               isStreaming: false,
               error: true
             };
@@ -566,7 +618,7 @@ function Chat() {
       console.error('[CHAT] ========== ERROR FINALIZADO ==========');
     }
   }, [selectedFiles, currentConversation, navigate, loadConversations, temperature, isStreaming, createNewConversation]);
-
+  
   // ==================== CANCELAR STREAMING ====================
 
   const handleCancelStreaming = useCallback(() => {
