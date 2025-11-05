@@ -1,16 +1,13 @@
 // vite.config.js
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
+import fs from 'fs';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -22,11 +19,15 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@assets': path.resolve(__dirname, './src/assets'),
       '@config': path.resolve(__dirname, './src/config'),
-      '@routes': path.resolve(__dirname, './src/routes'), 
+      '@routes': path.resolve(__dirname, './src/routes'),
     },
   },
   server: {
     port: 5173,
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, 'localhost-key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, 'localhost.pem')),
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

@@ -67,18 +67,14 @@ function CodeBlock({ language, code }) {
 
 // Función para corregir tablas mal formateadas
 function fixMalformedTable(content) {
-  // Detectar tablas con formato incorrecto (con separadores de columnas vacíos)
   const tableRegex = /(\|.*\|)\n(\|.*\|)\n(\|.*\|)/g;
   
   return content.replace(tableRegex, (match, headerRow, separatorRow, dataRow) => {
-    // Contar columnas en la fila de encabezado
     const headerColumns = headerRow.split('|').filter(col => col.trim() !== '');
     const columnCount = headerColumns.length;
     
-    // Si el separador no tiene el número correcto de columnas, corregirlo
     const separatorColumns = separatorRow.split('|').filter(col => col.trim() !== '');
     if (separatorColumns.length !== columnCount) {
-      // Crear un separador correcto
       const correctSeparator = '|' + Array(columnCount).fill('---').join('|') + '|';
       return `${headerRow}\n${correctSeparator}\n${dataRow}`;
     }
@@ -91,11 +87,8 @@ function fixMalformedTable(content) {
 function processMessageContent(content) {
   let processedContent = content;
   
-  // 1. Corregir tablas mal formateadas
   processedContent = fixMalformedTable(processedContent);
   
-  // 2. Detectar y formatear tablas sin separadores de Markdown
-  const potentialTableRegex = /^([^|\n]+\|[^|\n]+(\|[^|\n]+)*\n?)+$/gm;
   const lines = processedContent.split('\n');
   let inTable = false;
   let tableLines = [];
@@ -105,17 +98,14 @@ function processMessageContent(content) {
     const line = lines[i];
     const nextLine = lines[i + 1];
     
-    // Detectar si es una línea de tabla potencial
     const isPotentialTableLine = line.includes('|') && line.split('|').length > 2;
     const isNextLinePotentialTable = nextLine && nextLine.includes('|') && nextLine.split('|').length > 2;
     
     if (isPotentialTableLine && (inTable || isNextLinePotentialTable)) {
       if (!inTable) {
-        // Comenzar una nueva tabla
         inTable = true;
         tableLines = [];
         
-        // Agregar separador de tabla si no existe
         const columnCount = line.split('|').length - 1;
         const separator = '|' + Array(columnCount).fill('---').join('|') + '|';
         tableLines.push(separator);
@@ -123,7 +113,6 @@ function processMessageContent(content) {
       tableLines.push(line);
     } else {
       if (inTable && tableLines.length > 0) {
-        // Finalizar la tabla actual
         processedLines.push(tableLines.join('\n'));
         tableLines = [];
         inTable = false;
@@ -132,7 +121,6 @@ function processMessageContent(content) {
     }
   }
   
-  // Agregar cualquier tabla pendiente
   if (inTable && tableLines.length > 0) {
     processedLines.push(tableLines.join('\n'));
   }
@@ -143,12 +131,12 @@ function processMessageContent(content) {
 function MessageItem({ message, formatTime }) {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const contentLength = message.content?.length || 0;
 
-  // Procesar el contenido del mensaje para corregir tablas
+  // ⭐ FIX: Agregar message.isStreaming como dependencia
+  // Esto fuerza la re-renderización cuando el contenido cambia durante el streaming
   const processedContent = useMemo(() => {
     return processMessageContent(message.content || '');
-  }, [message.content]);
+  }, [message.content, message.isStreaming]); // ← Agregada dependencia
 
   const renderedContent = useMemo(() => {
     if (message.type === 'user') {
@@ -159,20 +147,7 @@ function MessageItem({ message, formatTime }) {
       );
     }
 
-    if (message.isStreaming) {
-      return (
-        <p className="whitespace-pre-wrap break-words">
-          {message.content}
-          <span 
-            className="inline-block w-1 h-5 ml-0.5 bg-blue-600 dark:bg-blue-400 align-middle"
-            style={{ 
-              animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' 
-            }}
-          />
-        </p>
-      );
-    }
-
+    // Renderizar Markdown siempre, incluso durante streaming
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-bold prose-p:leading-relaxed prose-ul:leading-relaxed prose-ol:leading-relaxed prose-li:leading-relaxed">
         <ReactMarkdown
@@ -382,7 +357,7 @@ function MessageItem({ message, formatTime }) {
         </ReactMarkdown>
       </div>
     );
-  }, [processedContent, message.isStreaming, message.type, contentLength]);
+  }, [processedContent, message.isStreaming, message.type]);
 
   return (
     <div
@@ -396,7 +371,6 @@ function MessageItem({ message, formatTime }) {
         }
       `}>
         {message.type === 'ai' ? (
-          // Logo del ITE que cambia según el tema
           <div className="w-8 h-8 flex items-center justify-center">
             <img 
               src={theme === 'dark' ? '/ite_dark.svg' : '/ite_light.svg'}
@@ -407,13 +381,11 @@ function MessageItem({ message, formatTime }) {
                 e.target.nextElementSibling.style.display = 'flex';
               }}
             />
-            {/* Fallback icon */}
             <div className="hidden w-full h-full items-center justify-center">
               <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         ) : (
-          // Avatar del usuario
           user?.avatar ? (
             <img 
               src={user.avatar} 

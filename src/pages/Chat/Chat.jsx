@@ -60,17 +60,17 @@ function Chat() {
       setIsStreaming(false);
     }
 
-if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
-  loadConversation(conversationId);
-} else {
-  setMessages([{
-    id: 'welcome',
-    type: 'ai',
-    content: 'Saludos. Soy el sistema de asistencia con inteligencia artificial del Tecnológico Nacional de México, Campus Ensenada. Mi propósito es brindarte apoyo en consultas académicas, investigación, desarrollo de proyectos y orientación estudiantil. ¿En qué tema requiere asistencia?',
-    timestamp: new Date(),
-  }]);
-  setCurrentConversation(null);
-}
+    if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
+      loadConversation(conversationId);
+    } else {
+      setMessages([{
+        id: 'welcome',
+        type: 'ai',
+        content: 'Saludos. Soy el sistema de asistencia con inteligencia artificial del Tecnológico Nacional de México, Campus Ensenada. Mi propósito es brindarte apoyo en consultas académicas, investigación, desarrollo de proyectos y orientación estudiantil. ¿En qué tema requiere asistencia?',
+        timestamp: new Date(),
+      }]);
+      setCurrentConversation(null);
+    }
 
     return () => {
       if (abortControllerRef.current) {
@@ -93,15 +93,12 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
       let conversationsList = [];
       
       if (response.data) {
-        // Estructura: { success: true, data: { conversations: [...] } }
         if (response.data.data?.conversations && Array.isArray(response.data.data.conversations)) {
           conversationsList = response.data.data.conversations;
         }
-        // Estructura: { data: { conversations: [...] } }
         else if (response.data.conversations && Array.isArray(response.data.conversations)) {
           conversationsList = response.data.conversations;
         }
-        // Estructura: { data: [...] } (array directo)
         else if (Array.isArray(response.data)) {
           conversationsList = response.data;
         }
@@ -139,20 +136,16 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
         throw new Error('No se recibieron datos de la conversación');
       }
 
-      // Extraer conversación: puede estar en data.data.conversation o data.conversation
       let conversation = null;
       let messagesData = [];
 
       if (response.data.data) {
-        // Estructura: { success: true, data: { conversation: {...}, messages: [...] } }
         conversation = response.data.data.conversation;
         messagesData = response.data.data.messages || [];
       } else if (response.data.conversation) {
-        // Estructura: { conversation: {...}, messages: [...] }
         conversation = response.data.conversation;
         messagesData = response.data.messages || [];
       } else {
-        // Estructura plana
         conversation = response.data;
         messagesData = response.data.messages || [];
       }
@@ -166,7 +159,6 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
 
       setCurrentConversation(conversation);
       
-      // Formatear mensajes para el frontend
       const formattedMessages = messagesData.map(msg => ({
         id: msg.id || msg._id,
         type: msg.role === 'user' ? 'user' : 'ai',
@@ -374,8 +366,12 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
 
     const trimmedContent = messageContent?.trim() || '';
 
+    // ⭐ DEFINIR IDs AL INICIO - FUERA DEL TRY
+    const userMessageId = `user-${Date.now()}`;
+    const aiMessageId = `ai-${Date.now()}`;
+
     const userMessage = {
-      id: `user-${Date.now()}`,
+      id: userMessageId,
       type: 'user',
       content: trimmedContent || 'Archivos adjuntos',
       timestamp: new Date(),
@@ -383,8 +379,6 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
     };
 
     setMessages(prev => [...prev, userMessage]);
-    
-    // CRÍTICO: NO agregar placeholder aquí, solo setear estados
     setIsLoading(true);
     setIsStreaming(true);
 
@@ -394,22 +388,15 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
     try {
       let convId = currentConversation?.id || currentConversation?._id;
       console.log('[CHAT] ConversationId inicial:', convId || 'NINGUNO');
-
-      // NO crear conversación aquí, dejar que el backend lo haga automáticamente
-      // El backend crea la conversación durante el streaming y la retorna en handleComplete
-      
       console.log('[CHAT] ConversationId para envío:', convId || 'null (backend creará nueva)');
 
       const config = {
         temperature: temperature
       };
 
-      // Variable para controlar si ya se agregó el placeholder
       let placeholderAdded = false;
-      const aiMessageId = `ai-${Date.now()}`;
 
       const handleChunk = (chunk, accumulated) => {
-        // CRÍTICO: Agregar placeholder solo cuando llega el PRIMER chunk
         if (!placeholderAdded) {
           console.log('[CHAT] Primer chunk recibido, agregando placeholder IA');
           placeholderAdded = true;
@@ -422,7 +409,6 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
             isStreaming: true,
           }]);
         } else {
-          // Actualizar contenido del mensaje existente
           setMessages(prev => 
             prev.map(msg => 
               msg.id === aiMessageId 
@@ -450,7 +436,6 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
           )
         );
 
-        // Actualizar conversación si viene del servidor
         if (conversation) {
           console.log('[CHAT] Actualizando conversación desde stream:', conversation);
           const newConvId = conversation.id || conversation._id;
@@ -467,14 +452,12 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
             return [conversation, ...prev];
           });
           
-          // Navegar solo si NO teníamos conversación antes
           if (!convId) {
             console.log('[CHAT] Navegando a nueva conversación:', newConvId);
             navigate(`/chat/${newConvId}`, { replace: true });
           }
         }
 
-        // Recargar lista de conversaciones
         loadConversations();
         console.log('[CHAT] ========== handleComplete FINALIZADO ==========');
       };
@@ -486,6 +469,20 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
         setIsStreaming(false);
         setIsLoading(false);
         
+        // ⭐ MANEJO SEGURO: Actualizar mensaje con error
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === aiMessageId 
+              ? { 
+                  ...msg, 
+                  content: '❌ Error al generar respuesta. Por favor, intenta de nuevo.',
+                  isStreaming: false,
+                  error: true
+                }
+              : msg
+          )
+        );
+        
         let errorMessage = 'Error al enviar el mensaje';
         
         if (error.message.includes('Token') || error.message.includes('autenticación')) {
@@ -496,12 +493,10 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
         }
         
         toast.error(errorMessage);
-        setMessages(prev => prev.filter(m => m.id !== aiMessageId && m.id !== userMessage.id));
         
         console.error('[CHAT] ========== handleError FINALIZADO ==========');
       };
 
-      // Enviar mensaje al backend
       console.log('[CHAT] Enviando mensaje al backend...');
       if (filesForRequest.length > 0) {
         console.log('[CHAT] Tipo: Multimodal con', filesForRequest.length, 'archivos');
@@ -547,12 +542,26 @@ if (conversationId && conversationId !== 'undefined' && conversationId !== 'null
       setIsStreaming(false);
       setIsLoading(false);
       
+      // ⭐ MANEJO SEGURO: El aiMessageId YA ESTÁ DEFINIDO
+      setMessages(prev => 
+        prev.map(msg => {
+          if (msg.id === aiMessageId) {
+            return {
+              ...msg,
+              content: '❌ Error al procesar tu mensaje. Por favor, intenta de nuevo.',
+              isStreaming: false,
+              error: true
+            };
+          }
+          return msg;
+        })
+      );
+      
       const errorMessage = error.response?.data?.message 
         || error.message 
         || 'Error al enviar el mensaje';
       
       toast.error(errorMessage);
-      setMessages(prev => prev.filter(m => m.id !== userMessage.id && m.id !== aiMessageId));
       
       console.error('[CHAT] ========== ERROR FINALIZADO ==========');
     }
