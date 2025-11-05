@@ -30,8 +30,6 @@ const getConversationId = (conversation) => {
  * @param {string} context 
  */
 const handleAPIError = (error, context) => {
-  console.error(`[CONVERSATION API] Error en ${context}:`, error);
-  
   if (error.response) {
     const status = error.response.status;
     const message = error.response.data?.message || error.message;
@@ -67,13 +65,10 @@ const conversationAPI = {
    */
   getConversations: async (page = 1, limit = 50) => {
     try {
-      console.log('[CONVERSATION API] Obteniendo conversaciones', { page, limit });
-      
       const response = await api.get('/api/conversations', {
         params: { page, limit },
       });
       
-      console.log('[CONVERSATION API] Conversaciones obtenidas:', response.data?.length || 0);
       return response;
     } catch (error) {
       handleAPIError(error, 'getConversations');
@@ -88,16 +83,11 @@ const conversationAPI = {
   getConversation: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] getConversation - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Obteniendo conversación:', conversationId);
-      
       const response = await api.get(`/api/conversations/${conversationId}`);
-      
-      console.log('[CONVERSATION API] Conversación obtenida:', getConversationId(response.data.conversation));
       return response;
     } catch (error) {
       handleAPIError(error, 'getConversation');
@@ -112,8 +102,6 @@ const conversationAPI = {
    */
   createConversation: async (title = null, firstMessage = null) => {
     try {
-      console.log('[CONVERSATION API] Creando conversación', { title, firstMessage: !!firstMessage });
-      
       const payload = {};
       
       if (title && title.trim().length > 0) {
@@ -125,8 +113,6 @@ const conversationAPI = {
       }
       
       const response = await api.post('/api/conversations', payload);
-      
-      console.log('[CONVERSATION API] Conversación creada:', getConversationId(response.data.conversation));
       return response;
     } catch (error) {
       handleAPIError(error, 'createConversation');
@@ -142,24 +128,19 @@ const conversationAPI = {
   updateConversation: async (conversationId, title) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] updateConversation - ID inválido:', conversationId);
       throw error;
     }
 
     if (!title || title.trim().length === 0) {
       const error = new Error('El título no puede estar vacío');
-      console.error('[CONVERSATION API] updateConversation - Título vacío');
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Actualizando conversación:', conversationId);
-      
       const response = await api.put(`/api/conversations/${conversationId}`, {
         title: title.trim(),
       });
       
-      console.log('[CONVERSATION API] Conversación actualizada');
       return response;
     } catch (error) {
       handleAPIError(error, 'updateConversation');
@@ -174,16 +155,11 @@ const conversationAPI = {
   deleteConversation: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] deleteConversation - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Eliminando conversación:', conversationId);
-      
       const response = await api.delete(`/api/conversations/${conversationId}`);
-      
-      console.log('[CONVERSATION API] Conversación eliminada');
       return response;
     } catch (error) {
       handleAPIError(error, 'deleteConversation');
@@ -200,18 +176,14 @@ const conversationAPI = {
   getMessages: async (conversationId, page = 1, limit = 50) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] getMessages - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Obteniendo mensajes:', { conversationId, page, limit });
-      
       const response = await api.get(`/api/conversations/${conversationId}/messages`, {
         params: { page, limit },
       });
       
-      console.log('[CONVERSATION API] Mensajes obtenidos:', response.data?.length || 0);
       return response;
     } catch (error) {
       handleAPIError(error, 'getMessages');
@@ -228,31 +200,25 @@ const conversationAPI = {
   addMessage: async (conversationId, content, role = 'user') => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] addMessage - ID inválido:', conversationId);
       throw error;
     }
 
     if (!content || content.trim().length === 0) {
       const error = new Error('El contenido del mensaje no puede estar vacío');
-      console.error('[CONVERSATION API] addMessage - Contenido vacío');
       throw error;
     }
 
     if (role !== 'user' && role !== 'assistant') {
       const error = new Error('Rol inválido. Debe ser "user" o "assistant"');
-      console.error('[CONVERSATION API] addMessage - Rol inválido:', role);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Agregando mensaje:', { conversationId, role });
-      
       const response = await api.post(`/api/conversations/${conversationId}/messages`, {
         content: content.trim(),
         role,
       });
       
-      console.log('[CONVERSATION API] Mensaje agregado');
       return response;
     } catch (error) {
       handleAPIError(error, 'addMessage');
@@ -268,24 +234,19 @@ const conversationAPI = {
   deleteMessage: async (conversationId, messageId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] deleteMessage - conversationId inválido:', conversationId);
       throw error;
     }
 
     if (!isValidConversationId(messageId)) {
       const error = new Error('ID de mensaje inválido');
-      console.error('[CONVERSATION API] deleteMessage - messageId inválido:', messageId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Eliminando mensaje:', { conversationId, messageId });
-      
       const response = await api.delete(
         `/api/conversations/${conversationId}/messages/${messageId}`
       );
       
-      console.log('[CONVERSATION API] Mensaje eliminado');
       return response;
     } catch (error) {
       handleAPIError(error, 'deleteMessage');
@@ -302,13 +263,10 @@ const conversationAPI = {
   searchConversations: async (query, page = 1, limit = 20) => {
     if (!query || query.trim().length === 0) {
       const error = new Error('La búsqueda no puede estar vacía');
-      console.error('[CONVERSATION API] searchConversations - Query vacío');
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Buscando conversaciones:', query);
-      
       const response = await api.get('/api/conversations/search', {
         params: { 
           query: query.trim(), 
@@ -317,7 +275,6 @@ const conversationAPI = {
         },
       });
       
-      console.log('[CONVERSATION API] Resultados encontrados:', response.data?.length || 0);
       return response;
     } catch (error) {
       handleAPIError(error, 'searchConversations');
@@ -332,16 +289,11 @@ const conversationAPI = {
   archiveConversation: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] archiveConversation - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Archivando conversación:', conversationId);
-      
       const response = await api.post(`/api/conversations/${conversationId}/archive`);
-      
-      console.log('[CONVERSATION API] Conversación archivada');
       return response;
     } catch (error) {
       handleAPIError(error, 'archiveConversation');
@@ -356,16 +308,11 @@ const conversationAPI = {
   unarchiveConversation: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] unarchiveConversation - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Desarchivando conversación:', conversationId);
-      
       const response = await api.post(`/api/conversations/${conversationId}/unarchive`);
-      
-      console.log('[CONVERSATION API] Conversación desarchivada');
       return response;
     } catch (error) {
       handleAPIError(error, 'unarchiveConversation');
@@ -380,13 +327,10 @@ const conversationAPI = {
    */
   getArchivedConversations: async (page = 1, limit = 50) => {
     try {
-      console.log('[CONVERSATION API] Obteniendo conversaciones archivadas', { page, limit });
-      
       const response = await api.get('/api/conversations/archived', {
         params: { page, limit },
       });
       
-      console.log('[CONVERSATION API] Conversaciones archivadas obtenidas:', response.data?.length || 0);
       return response;
     } catch (error) {
       handleAPIError(error, 'getArchivedConversations');
@@ -401,16 +345,11 @@ const conversationAPI = {
   favoriteConversation: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] favoriteConversation - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Marcando como favorita:', conversationId);
-      
       const response = await api.post(`/api/conversations/${conversationId}/favorite`);
-      
-      console.log('[CONVERSATION API] Conversación marcada como favorita');
       return response;
     } catch (error) {
       handleAPIError(error, 'favoriteConversation');
@@ -425,16 +364,11 @@ const conversationAPI = {
   unfavoriteConversation: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] unfavoriteConversation - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Quitando de favoritos:', conversationId);
-      
       const response = await api.delete(`/api/conversations/${conversationId}/favorite`);
-      
-      console.log('[CONVERSATION API] Conversación quitada de favoritos');
       return response;
     } catch (error) {
       handleAPIError(error, 'unfavoriteConversation');
@@ -449,13 +383,10 @@ const conversationAPI = {
    */
   getFavoriteConversations: async (page = 1, limit = 50) => {
     try {
-      console.log('[CONVERSATION API] Obteniendo conversaciones favoritas', { page, limit });
-      
       const response = await api.get('/api/conversations/favorites', {
         params: { page, limit },
       });
       
-      console.log('[CONVERSATION API] Conversaciones favoritas obtenidas:', response.data?.length || 0);
       return response;
     } catch (error) {
       handleAPIError(error, 'getFavoriteConversations');
@@ -470,18 +401,14 @@ const conversationAPI = {
   exportToPDF: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] exportToPDF - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Exportando a PDF:', conversationId);
-      
       const response = await api.get(`/api/conversations/${conversationId}/export/pdf`, {
         responseType: 'blob',
       });
       
-      console.log('[CONVERSATION API] PDF generado');
       return response;
     } catch (error) {
       handleAPIError(error, 'exportToPDF');
@@ -496,18 +423,14 @@ const conversationAPI = {
   exportToTXT: async (conversationId) => {
     if (!isValidConversationId(conversationId)) {
       const error = new Error('ID de conversación inválido');
-      console.error('[CONVERSATION API] exportToTXT - ID inválido:', conversationId);
       throw error;
     }
 
     try {
-      console.log('[CONVERSATION API] Exportando a TXT:', conversationId);
-      
       const response = await api.get(`/api/conversations/${conversationId}/export/txt`, {
         responseType: 'blob',
       });
       
-      console.log('[CONVERSATION API] TXT generado');
       return response;
     } catch (error) {
       handleAPIError(error, 'exportToTXT');
@@ -520,11 +443,7 @@ const conversationAPI = {
    */
   getStats: async () => {
     try {
-      console.log('[CONVERSATION API] Obteniendo estadísticas');
-      
       const response = await api.get('/api/conversations/stats');
-      
-      console.log('[CONVERSATION API] Estadísticas obtenidas');
       return response;
     } catch (error) {
       handleAPIError(error, 'getStats');

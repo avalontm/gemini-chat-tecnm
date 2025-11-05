@@ -220,15 +220,31 @@ export const authAPI = {
     }
   },
 
-  /**
+ /**
    * Verificar email del usuario
    * @param {string} token - Token de verificacion
    * @returns {Promise} - Promise con confirmacion
    */
   verifyEmail: async (token) => {
     try {
-      const response = await api.post('/api/auth/verify-email', {
-        token,
+      // IMPORTANTE: El backend espera el token en la URL, no en el body
+      const response = await api.get(`/api/auth/verify-email/${token}`);
+      
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Reenviar email de verificacion
+   * @param {string} email - Email del usuario
+   * @returns {Promise} - Promise con confirmacion
+   */
+  resendVerificationEmail: async (email) => {
+    try {
+      const response = await api.post('/api/auth/resend-verification', {
+        email,
       });
       
       return response.data;

@@ -1,3 +1,5 @@
+// src/pages/Chat/Chat.jsx
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -15,8 +17,6 @@ import {
   ChatInput
 } from '@components/Chat';
 
-// ==================== CONSTANTES ====================
-
 const WELCOME_MESSAGE = {
   id: 'welcome',
   type: 'ai',
@@ -24,22 +24,21 @@ const WELCOME_MESSAGE = {
   timestamp: new Date(),
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 5;
-const SAFETY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
-
-// ==================== COMPONENTE PRINCIPAL ====================
+const SAFETY_TIMEOUT = 5 * 60 * 1000;
+const STREAM_DELAY = 60; // FPS para renderizado suave
 
 function Chat() {
   const navigate = useNavigate();
   const { conversationId } = useParams();
   const { user, token, isAuthenticated, logout } = useAuth();
 
-  // Refs
   const abortControllerRef = useRef(null);
   const isCreatingConversationRef = useRef(false);
+  const streamBufferRef = useRef('');
+  const lastRenderTimeRef = useRef(0);
 
-  // Estados principales
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -50,16 +49,12 @@ function Chat() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [temperature, setTemperature] = useState(0.7);
 
-  // ==================== AUTENTICACIÓN ====================
-
   useEffect(() => {
     if (!isAuthenticated && !token) {
       toast.error('Debes iniciar sesión');
       navigate(SITE_CONFIG.routes.login);
     }
   }, [isAuthenticated, token, navigate]);
-
-  // ==================== CARGAR CONVERSACIONES ====================
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -86,7 +81,6 @@ function Chat() {
       
       setConversations(conversationsList);
     } catch (error) {
-      console.error('[CHAT] Error cargando conversaciones:', error);
       if (error.response?.status === 401) {
         toast.error('Sesión expirada');
         navigate(SITE_CONFIG.routes.login);
@@ -97,8 +91,6 @@ function Chat() {
       setIsLoadingConversations(false);
     }
   }, [navigate]);
-
-  // ==================== CONVERSACIÓN ACTIVA ====================
 
   useEffect(() => {
     if (abortControllerRef.current) {
@@ -167,8 +159,6 @@ function Chat() {
       
       setMessages(formattedMessages);
     } catch (error) {
-      console.error('[CHAT] Error cargando conversación:', error);
-      
       if (error.response?.status === 404) {
         toast.error('Conversación no encontrada');
         navigate('/chat');
@@ -185,8 +175,6 @@ function Chat() {
       setIsLoading(false);
     }
   }, [navigate]);
-
-  // ==================== GESTIÓN DE CONVERSACIONES ====================
 
   const handleNewConversation = useCallback(() => {
     if (abortControllerRef.current) {
@@ -223,7 +211,6 @@ function Chat() {
       
       toast.success('Conversación eliminada');
     } catch (error) {
-      console.error('[CHAT] Error eliminando conversación:', error);
       toast.error('Error al eliminar conversación');
     }
   }, [currentConversation, handleNewConversation]);
@@ -264,14 +251,11 @@ function Chat() {
       return newConversation;
       
     } catch (error) {
-      console.error('[CHAT] Error creando conversación:', error);
       throw error;
     } finally {
       isCreatingConversationRef.current = false;
     }
   }, []);
-
-  // ==================== GESTIÓN DE ARCHIVOS ====================
 
   const handleFileSelect = useCallback((e, type = 'file') => {
     const files = Array.from(e.target.files);
@@ -316,7 +300,24 @@ function Chat() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // ==================== ENVIAR MENSAJE CON STREAMING ====================
+  // Función para procesar chunks con delay controlado
+  const processChunkWithDelay = useCallback(async (chunk, accumulated, callback) => {
+    const now = Date.now();
+    const timeSinceLastRender = now - lastRenderTimeRef.current;
+    
+    // Si ha pasado suficiente tiempo desde el último render, procesar inmediatamente
+    if (timeSinceLastRender >= STREAM_DELAY) {
+      lastRenderTimeRef.current = now;
+      callback(chunk, accumulated);
+      return;
+    }
+    
+    // Si no, esperar el tiempo restante para completar el delay
+    const waitTime = STREAM_DELAY - timeSinceLastRender;
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    lastRenderTimeRef.current = Date.now();
+    callback(chunk, accumulated);
+  }, []);
 
   const handleSendMessage = useCallback(async (messageContent) => {
     if ((!messageContent || !messageContent.trim()) && selectedFiles.length === 0) {
@@ -348,8 +349,11 @@ function Chat() {
     const filesForRequest = [...selectedFiles];
     setSelectedFiles([]);
 
+    // Resetear referencias del stream
+    streamBufferRef.current = '';
+    lastRenderTimeRef.current = 0;
+
     const safetyTimeoutId = setTimeout(() => {
-      console.warn('[CHAT] TIMEOUT DE SEGURIDAD: Limpiando estados después de 5 minutos');
       setIsStreaming(false);
       setIsLoading(false);
       
@@ -369,93 +373,96 @@ function Chat() {
       let placeholderAdded = false;
       let completeCalled = false;
 
-      const handleChunk = (chunk, accumulated) => {
-  if (!placeholderAdded) {
-    placeholderAdded = true;
-    
-    flushSync(() => {
-      setIsLoading(false);
-      setIsStreaming(true);
-    });
-    
-    flushSync(() => {
-      setMessages(prev => [...prev, {
-        id: aiMessageId,
-        type: 'ai',
-        content: accumulated,
-        timestamp: new Date(),
-        isStreaming: true,
-      }]);
-    });
-  } else {
-    flushSync(() => {
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === aiMessageId 
-            ? { 
-                ...msg, 
-                content: accumulated, 
-                isStreaming: true  // Mantener true durante streaming
-              }
-            : msg
-        )
-      );
-    });
-  }
-};
+      const handleChunk = async (chunk, accumulated) => {
+        streamBufferRef.current = accumulated;
+        
+        if (!placeholderAdded) {
+          placeholderAdded = true;
+          
+          flushSync(() => {
+            setIsLoading(false);
+            setIsStreaming(true);
+          });
+          
+          flushSync(() => {
+            setMessages(prev => [...prev, {
+              id: aiMessageId,
+              type: 'ai',
+              content: accumulated,
+              timestamp: new Date(),
+              isStreaming: true,
+            }]);
+          });
+        } else {
+          // Usar el delay controlado para actualizar el mensaje
+          await processChunkWithDelay(chunk, accumulated, (chunk, accumulated) => {
+            flushSync(() => {
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === aiMessageId 
+                    ? { 
+                        ...msg, 
+                        content: accumulated, 
+                        isStreaming: true
+                      }
+                    : msg
+                )
+              );
+            });
+          });
+        }
+      };
 
-const handleComplete = (data) => {
-  if (completeCalled) return;
-  completeCalled = true;
-  
-  clearTimeout(safetyTimeoutId);
-  
-  const { conversation, messageId } = data;
-  
-  // IMPORTANTE: Primero actualizar estados globales
-  setIsStreaming(false);
-  setIsLoading(false);
-  
-  // Actualizar el mensaje y asegurar que isStreaming sea false
-  // Usar setTimeout para garantizar que React procese el cambio
-  setTimeout(() => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === aiMessageId 
-          ? { 
-              ...msg, 
-              content: msg.content, // Mantener el contenido acumulado
-              isStreaming: false,   // CRITICO: Cambiar a false para procesar tablas
-              id: messageId || msg.id,
-              timestamp: msg.timestamp || new Date()
+      const handleComplete = (data) => {
+        if (completeCalled) return;
+        completeCalled = true;
+        
+        clearTimeout(safetyTimeoutId);
+        
+        const { conversation, messageId } = data;
+        
+        setIsStreaming(false);
+        setIsLoading(false);
+        
+        // Asegurar que el último contenido se muestre correctamente
+        setTimeout(() => {
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === aiMessageId 
+                ? { 
+                    ...msg, 
+                    content: streamBufferRef.current || msg.content,
+                    isStreaming: false,
+                    id: messageId || msg.id,
+                    timestamp: msg.timestamp || new Date()
+                  }
+                : msg
+            )
+          );
+        }, 150);
+
+        if (conversation) {
+          const newConvId = conversation.id || conversation._id;
+          
+          setCurrentConversation(conversation);
+          
+          setConversations(prev => {
+            const exists = prev.some(c => (c.id || c._id) === newConvId);
+            if (exists) {
+              return prev.map(c => 
+                (c.id || c._id) === newConvId ? conversation : c
+              );
             }
-          : msg
-      )
-    );
-  }, 150);
+            return [conversation, ...prev];
+          });
+          
+          if (!convId) {
+            navigate(`/chat/${newConvId}`, { replace: true });
+          }
+        }
 
-  if (conversation) {
-    const newConvId = conversation.id || conversation._id;
-    
-    setCurrentConversation(conversation);
-    
-    setConversations(prev => {
-      const exists = prev.some(c => (c.id || c._id) === newConvId);
-      if (exists) {
-        return prev.map(c => 
-          (c.id || c._id) === newConvId ? conversation : c
-        );
-      }
-      return [conversation, ...prev];
-    });
-    
-    if (!convId) {
-      navigate(`/chat/${newConvId}`, { replace: true });
-    }
-  }
-
-  loadConversations();
-};
+        loadConversations();
+      };
 
       const handleError = (error) => {
         clearTimeout(safetyTimeoutId);
@@ -468,7 +475,7 @@ const handleComplete = (data) => {
             msg.id === aiMessageId 
               ? { 
                   ...msg, 
-                  content: 'Error al generar respuesta. Por favor, intenta de nuevo.',
+                  content: streamBufferRef.current || 'Error al generar respuesta. Por favor, intenta de nuevo.',
                   isStreaming: false,
                   error: true
                 }
@@ -511,7 +518,7 @@ const handleComplete = (data) => {
         setTimeout(() => {
           if (!completeCalled && placeholderAdded) {
             handleComplete({
-              fullResponse: '',
+              fullResponse: streamBufferRef.current,
               conversationId: convId,
               messageId: null,
               conversation: currentConversation
@@ -532,7 +539,7 @@ const handleComplete = (data) => {
         setTimeout(() => {
           if (!completeCalled && placeholderAdded) {
             handleComplete({
-              fullResponse: '',
+              fullResponse: streamBufferRef.current,
               conversationId: convId,
               messageId: null,
               conversation: currentConversation
@@ -542,8 +549,6 @@ const handleComplete = (data) => {
       }
 
     } catch (error) {
-      console.error('[CHAT] Error:', error);
-      
       clearTimeout(safetyTimeoutId);
       
       setIsStreaming(false);
@@ -554,7 +559,7 @@ const handleComplete = (data) => {
           if (msg.id === aiMessageId) {
             return {
               ...msg,
-              content: 'Error al procesar tu mensaje. Por favor, intenta de nuevo.',
+              content: streamBufferRef.current || 'Error al procesar tu mensaje. Por favor, intenta de nuevo.',
               isStreaming: false,
               error: true
             };
@@ -569,10 +574,8 @@ const handleComplete = (data) => {
       
       toast.error(errorMessage);
     }
-  }, [selectedFiles, currentConversation, navigate, loadConversations, temperature, isStreaming]);
+  }, [selectedFiles, currentConversation, navigate, loadConversations, temperature, isStreaming, processChunkWithDelay]);
   
-  // ==================== CANCELAR STREAMING ====================
-
   const handleCancelStreaming = useCallback(() => {
     if (isStreaming && abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -583,14 +586,10 @@ const handleComplete = (data) => {
     }
   }, [isStreaming]);
 
-  // ==================== LOGOUT ====================
-
   const handleLogout = useCallback(() => {
     logout();
     navigate('/');
   }, [logout, navigate]);
-
-  // ==================== UTILIDADES ====================
 
   const formatTime = useCallback((date) => {
     return new Date(date).toLocaleTimeString('es-MX', {
@@ -611,8 +610,6 @@ const handleComplete = (data) => {
     if (days < 7) return `Hace ${days} días`;
     return new Date(date).toLocaleDateString('es-MX');
   }, []);
-
-  // ==================== RENDER ====================
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">

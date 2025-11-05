@@ -3,6 +3,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { User, Sparkles, Copy, Check, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '@context/AuthContext';
@@ -67,224 +69,64 @@ function CodeBlock({ language, code }) {
   );
 }
 
-// Funcion para corregir tablas mal formateadas de Gemini
-function fixMalformedTable(content) {
-  const lines = content.split('\n');
-  const result = [];
-  let i = 0;
+// Función mejorada para limpiar contenido de Gemini
+function cleanGeminiContent(content) {
+  if (!content) return '';
   
-  // Funciones auxiliares
-  const isTableLine = (line) => {
-    const trimmed = line.trim();
-    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length > 2;
-  };
-  
-  const isSeparatorLine = (line) => {
-    const trimmed = line.trim();
-    // Linea separadora: contiene |, -, espacios Y tiene al menos un "---"
-    // Acepta formatos: |---|---| o | --- | --- | o |---|---|---|---|
-    if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return false;
-    const content = trimmed.slice(1, -1); // Quitar pipes inicial/final
-    return /^[\s\-|]+$/.test(content) && content.includes('-');
-  };
-  
-  const normalizeLine = (line) => {
-    // Normalizar espaciado: | texto | texto |
-    return line.trim().replace(/\|\s*/g, '| ').replace(/\s*\|/g, ' |');
-  };
-  
-  const countColumns = (line) => {
-    return line.split('|').filter(cell => cell.trim() !== '').length;
-  };
-  
-  const generateSeparator = (columnCount) => {
-    return '| ' + Array(columnCount).fill('---').join(' | ') + ' |';
-  };
-  
-  while (i < lines.length) {
-    const line = lines[i];
-    
-    // Si no es linea de tabla, agregar tal cual
-    if (!isTableLine(line)) {
-      result.push(line);
-      i++;
-      continue;
-    }
-    
-    // Detectamos inicio de tabla (puede ser header o separador malformado)
-    // Si la primera linea es separador, buscar el header real
-    if (isSeparatorLine(line)) {
-      // Saltar todos los separadores iniciales basura
-      while (i < lines.length && isSeparatorLine(lines[i])) {
-        i++;
+  let cleaned = content;
+
+  // 1. Limpiar filas de separadores duplicados en tablas
+  // Gemini genera: | Header | | --- | --- | | Row |
+  // Necesitamos: | Header | \n | --- | \n | Row |
+  cleaned = cleaned.replace(
+    /(\|[^\n]+\|)\s*(\|[\s\-:|]+\|)\s*(\|[^\n]+\|)/g,
+    (match, header, separator, row) => {
+      // Verificar si el separador es válido (contiene ---)
+      if (separator.includes('---')) {
+        return `${header}\n${separator}\n${row}`;
       }
-      continue;
-    }
-    
-    // Header real encontrado
-    const headerLine = normalizeLine(line);
-    const columnCount = countColumns(headerLine);
-    
-    result.push(headerLine);
-    i++;
-    
-    // Saltar TODAS las lineas separadoras consecutivas (gemini pone 2-3)
-    while (i < lines.length && isSeparatorLine(lines[i])) {
-      i++;
-    }
-    
-    // Insertar UN SOLO separador correcto
-    result.push(generateSeparator(columnCount));
-    
-    // Procesar resto de filas de la tabla
-    while (i < lines.length && isTableLine(lines[i]) && !isSeparatorLine(lines[i])) {
-      result.push(normalizeLine(lines[i]));
-      i++;
-    }
-  }
-  
-  return result.join('\n');
-}
-
-// Funcion para limpiar URLs mal formateadas
-function cleanMalformedUrls(content) {
-  // Limpiar URLs con %5D (] encoded) y otras malformaciones
-  // Patron: url%5D(url) o url](url)
-  content = content.replace(/(https?:\/\/[^\s\)]+?)(?:%5D|\])\((https?:\/\/[^\s\)]+)\)/gi, '$1');
-  
-  // Limpiar URLs duplicadas en formato ![](url)](url)
-  content = content.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s\)]+?)\)\]\(\2\)/gi, '![$1]($2)');
-  
-  return content;
-}
-
-// Funcion para convertir URLs de imagenes en sintaxis Markdown
-function convertImageUrlsToMarkdown(content) {
-  // Primero limpiar URLs mal formateadas
-  content = cleanMalformedUrls(content);
-  
-  // NO convertir si ya esta en formato Markdown: ![texto](url) o [texto](url)
-  const imageUrlRegex = /(?<!\]\()(?<!\()(?<!src=["'])(?<!href=["'])(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s\)]*)?)/gi;
-  
-  return content.replace(imageUrlRegex, (match, offset) => {
-    // Verificar que no este precedido por sintaxis Markdown
-    const before = content.substring(Math.max(0, offset - 10), offset);
-    if (before.includes('](') || before.includes('![')) {
       return match;
     }
-    return `![Imagen](${match})`;
-  });
-}
+  );
 
-// Funcion para mejorar el formato de listas
-function improveListFormatting(content) {
-  const lines = content.split('\n');
-  const processedLines = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    
-    // Detectar listas con asteriscos sin espacio
-    if (line.match(/^\*[^\s*]/)) {
-      line = line.replace(/^\*/, '* ');
-    }
-    
-    // Detectar listas numeradas sin espacio
-    if (line.match(/^\d+\.[^\s]/)) {
-      line = line.replace(/^(\d+\.)/, '$1 ');
-    }
-    
-    // Detectar vinetas con guion sin espacio
-    if (line.match(/^-[^\s-]/)) {
-      line = line.replace(/^-/, '- ');
-    }
-    
-    processedLines.push(line);
-  }
-  
-  return processedLines.join('\n');
-}
+  // 2. Eliminar separadores intermedios duplicados en el cuerpo de la tabla
+  // Mantener solo el separador después del header
+  cleaned = cleaned.replace(
+    /(\|[^\n]+\|\n\|[\s\-:|]+\|)\n(\|[\s\-:|]+\|\n)+/g,
+    '$1\n'
+  );
 
-// Funcion para procesar y limpiar el contenido del mensaje
-function processMessageContent(content) {
-  let processedContent = content;
-  
-  // 1. Convertir URLs de imagenes a Markdown
-  processedContent = convertImageUrlsToMarkdown(processedContent);
-  
-  // 2. Mejorar formato de listas
-  processedContent = improveListFormatting(processedContent);
-  
-  // 3. Corregir tablas mal formateadas
-  processedContent = fixMalformedTable(processedContent);
-  
-  // 4. Detectar y formatear tablas sin separadores de Markdown
-  const lines = processedContent.split('\n');
-  let inTable = false;
-  let tableLines = [];
-  let processedLines = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const nextLine = lines[i + 1];
-    
-    const isPotentialTableLine = line.includes('|') && line.split('|').length > 2;
-    const isNextLinePotentialTable = nextLine && nextLine.includes('|') && nextLine.split('|').length > 2;
-    
-    if (isPotentialTableLine && (inTable || isNextLinePotentialTable)) {
-      if (!inTable) {
-        inTable = true;
-        tableLines = [];
-        
-        const columnCount = line.split('|').length - 1;
-        const separator = '|' + Array(columnCount).fill('---').join('|') + '|';
-        tableLines.push(line);
-        tableLines.push(separator);
-      } else {
-        tableLines.push(line);
-      }
-    } else {
-      if (inTable && tableLines.length > 0) {
-        processedLines.push(tableLines.join('\n'));
-        tableLines = [];
-        inTable = false;
-      }
-      processedLines.push(line);
-    }
-  }
-  
-  if (inTable && tableLines.length > 0) {
-    processedLines.push(tableLines.join('\n'));
-  }
-  
-  return processedLines.join('\n');
+  // 3. Normalizar separadores de tabla (mínimo 3 guiones)
+  cleaned = cleaned.replace(
+    /\|\s*-{1,2}\s*\|/g,
+    '| --- |'
+  );
+
+  // 4. Limpiar URLs mal formateadas
+  cleaned = cleaned.replace(/(https?:\/\/[^\s\)]+?)(?:%5D|\])\((https?:\/\/[^\s\)]+)\)/gi, '$1');
+  cleaned = cleaned.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s\)]+?)\)\]\(\2\)/gi, '![$1]($2)');
+
+  return cleaned;
 }
 
 function MessageItem({ message, formatTime }) {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const [forceProcess, setForceProcess] = useState(false);
 
-  // Forzar re-procesamiento cuando termine el streaming
-  useEffect(() => {
-    if (!message.isStreaming && message.content && message.content.includes('|')) {
-      setForceProcess(prev => !prev);
-    }
-  }, [message.isStreaming, message.content]);
-
-  // CRITICO: Procesar SIEMPRE para corregir tablas
-  // El useMemo se recalcula cada vez que cambia el contenido o isStreaming
+  // Procesar contenido con useMemo para mejor performance
   const processedContent = useMemo(() => {
-    const content = message.content || '';
-    
-    // Si esta en streaming Y el contenido no tiene tablas, retornar raw
-    if (message.isStreaming && !content.includes('|')) {
-      return content;
-    }
-    
-    // Si tiene tablas O ya termino el streaming, procesar SIEMPRE
-    return processMessageContent(content);
-  }, [message.content, message.isStreaming, forceProcess]);
+  const content = message.content || '';
+  
+  // Procesar SIEMPRE, pero de forma más ligera durante streaming
+  if (message.isStreaming) {
+    // Procesamiento mínimo durante streaming
+    return content.replace(/(\|\s*---+\s*\|[\s\S]*?)(\|\s*---+\s*\|)+/g, '$1');
+  }
+  
+  // Procesamiento completo cuando termina el streaming
+  return cleanGeminiContent(content);
+}, [message.content, message.isStreaming]);
+
 
   const renderedContent = useMemo(() => {
     if (message.type === 'user') {
@@ -295,12 +137,13 @@ function MessageItem({ message, formatTime }) {
       );
     }
 
-    // Renderizar Markdown siempre, incluso durante streaming
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-bold prose-p:leading-relaxed prose-ul:leading-relaxed prose-ol:leading-relaxed prose-li:leading-relaxed">
         <ReactMarkdown
+          remarkPlugins={[remarkGfm]} // Soporte para tablas, tachados, etc.
+          rehypePlugins={[rehypeRaw]} // Soporte para HTML inline
           components={{
-            // BLOQUES DE CODIGO
+            // BLOQUES DE CÓDIGO
             code({ node, inline, className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
               const codeString = String(children).replace(/\n$/, '');
@@ -323,21 +166,34 @@ function MessageItem({ message, formatTime }) {
                 </code>
               );
             },
-            
-            // Detectar URLs de texto plano y convertirlas en enlaces + Cursor animado
+
+            // TEXTO CON URLs automáticas
             text({ node, children }) {
               if (typeof children !== 'string') return children;
               
-              // Regex mas especifico que excluye URLs ya en formato Markdown
-              const urlRegex = /(?<!\]\()(?<!\[)(https?:\/\/[^\s\)]+?)(?=[\s,;.!?]|$)/g;
+              // Solo convertir URLs durante streaming para mejor performance
+              if (message.isStreaming) {
+                return (
+                  <>
+                    {children}
+                    <span 
+                      className="inline-block w-1 h-4 ml-0.5 bg-blue-600 dark:bg-blue-400 align-middle"
+                      style={{ 
+                        animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' 
+                      }}
+                    />
+                  </>
+                );
+              }
+
+              // Convertir URLs a enlaces después del streaming
+              const urlRegex = /(https?:\/\/[^\s\)]+?)(?=[\s,;.!?]|$)/g;
               const parts = children.split(urlRegex);
               
-              const result = parts.map((part, index) => {
+              if (parts.length === 1) return children;
+              
+              return parts.map((part, index) => {
                 if (part && part.match(/^https?:\/\//)) {
-                  // No convertir si es una URL de imagen
-                  if (part.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i)) {
-                    return null;
-                  }
                   return (
                     <a
                       key={index}
@@ -353,30 +209,13 @@ function MessageItem({ message, formatTime }) {
                 }
                 return part;
               });
-              
-              // Agregar cursor animado al final si esta en streaming
-              if (message.isStreaming && parts.length === 1) {
-                return (
-                  <>
-                    {children}
-                    <span 
-                      className="inline-block w-1 h-4 ml-0.5 bg-blue-600 dark:bg-blue-400 align-middle"
-                      style={{ 
-                        animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' 
-                      }}
-                    />
-                  </>
-                );
-              }
-              
-              return result.length === 1 ? children : result;
             },
 
+            // ELEMENTOS BÁSICOS
             pre({ children }) {
               return <div className="my-0">{children}</div>;
             },
 
-            // ELEMENTOS DE TEXTO
             p({ children }) {
               return <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>;
             },
@@ -413,7 +252,7 @@ function MessageItem({ message, formatTime }) {
               return <h6 className="text-xs font-bold mb-2 mt-3 text-gray-900 dark:text-white uppercase text-gray-500 dark:text-gray-400">{children}</h6>;
             },
 
-            // CITAS Y LINEAS
+            // CITAS Y LÍNEAS
             blockquote({ children }) {
               return (
                 <blockquote className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 py-2 my-4 italic bg-blue-50 dark:bg-blue-900/20 rounded-r text-gray-700 dark:text-gray-300">
@@ -442,7 +281,7 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // TABLAS MEJORADAS
+            // TABLAS (mejoradas con remark-gfm)
             table({ children }) {
               return (
                 <div className="overflow-x-auto my-4 border border-gray-200 dark:border-slate-600 rounded-lg shadow-sm">
@@ -454,7 +293,7 @@ function MessageItem({ message, formatTime }) {
             },
             thead({ children }) {
               return (
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800">
+                <thead className="bg-gray-50 dark:bg-slate-700">
                   {children}
                 </thead>
               );
@@ -466,44 +305,25 @@ function MessageItem({ message, formatTime }) {
                 </tbody>
               );
             },
-            th({ children, node }) {
-              const isFirstColumn = node?.properties?.className?.includes('first-column');
+            th({ children }) {
               return (
-                <th className={`
-                  px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider
-                  ${isFirstColumn ? 'border-r border-gray-200 dark:border-slate-600' : ''}
-                `}>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider border-r border-gray-200 dark:border-slate-600">
                   {children}
                 </th>
               );
             },
-            td({ children, node }) {
-              const isFirstColumn = node?.properties?.className?.includes('first-column');
+            td({ children }) {
               const isEmpty = !children || children === '';
-              
               return (
-                <td className={`
-                  px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-slate-600
-                  ${isFirstColumn ? 'border-r border-gray-200 dark:border-slate-600 font-medium' : ''}
-                  ${isEmpty ? 'bg-gray-50 dark:bg-slate-700/50 italic text-gray-400 dark:text-gray-500' : ''}
-                `}>
+                <td className={`px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-slate-600 ${
+                  isEmpty ? 'bg-gray-50 dark:bg-slate-700/50 italic text-gray-400 dark:text-gray-500' : ''
+                }`}>
                   {isEmpty ? '—' : children}
                 </td>
               );
             },
-            tr({ children, node }) {
-              const isHeaderRow = node?.properties?.className?.includes('header-row');
-              return (
-                <tr className={`
-                  transition-colors
-                  ${isHeaderRow ? 'hover:bg-gray-100 dark:hover:bg-slate-700' : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'}
-                `}>
-                  {children}
-                </tr>
-              );
-            },
 
-            // IMAGENES
+            // IMÁGENES
             img({ src, alt, title }) {
               return (
                 <div className="my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-600">
@@ -524,7 +344,7 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // ELEMENTOS DE ENFASIS
+            // ELEMENTOS DE ÉNFASIS
             strong({ children }) {
               return <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>;
             },
@@ -533,7 +353,12 @@ function MessageItem({ message, formatTime }) {
               return <em className="italic text-gray-800 dark:text-gray-200">{children}</em>;
             },
 
-            // LISTAS DE TAREAS
+            // TACHADO (soporte de remark-gfm)
+            del({ children }) {
+              return <del className="line-through text-gray-500 dark:text-gray-400">{children}</del>;
+            },
+
+            // LISTAS DE TAREAS (soporte de remark-gfm)
             input({ checked, type }) {
               if (type === 'checkbox') {
                 return (

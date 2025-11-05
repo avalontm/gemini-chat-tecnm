@@ -4,6 +4,8 @@
  * Sistema centralizado de manejo de errores con logs detallados
  */
 
+const IS_DEVELOPMENT = import.meta.env.MODE === 'development';
+
 // Colores para logs en consola (solo desarrollo)
 const LOG_STYLES = {
   error: 'color: #EF4444; font-weight: bold; font-size: 12px;',
@@ -18,6 +20,8 @@ const LOG_STYLES = {
  */
 export const logger = {
   error: (context, message, data = null) => {
+    if (!IS_DEVELOPMENT) return;
+    
     const timestamp = new Date().toISOString();
     console.group(`%c[ERROR] ${context}`, LOG_STYLES.error);
     console.log(`%cTimestamp: ${timestamp}`, LOG_STYLES.debug);
@@ -31,6 +35,8 @@ export const logger = {
   },
 
   warning: (context, message, data = null) => {
+    if (!IS_DEVELOPMENT) return;
+    
     const timestamp = new Date().toISOString();
     console.group(`%c[WARNING] ${context}`, LOG_STYLES.warning);
     console.log(`%cTimestamp: ${timestamp}`, LOG_STYLES.debug);
@@ -43,6 +49,8 @@ export const logger = {
   },
 
   info: (context, message, data = null) => {
+    if (!IS_DEVELOPMENT) return;
+    
     const timestamp = new Date().toISOString();
     console.group(`%c[INFO] ${context}`, LOG_STYLES.info);
     console.log(`%cTimestamp: ${timestamp}`, LOG_STYLES.debug);
@@ -55,6 +63,8 @@ export const logger = {
   },
 
   success: (context, message, data = null) => {
+    if (!IS_DEVELOPMENT) return;
+    
     const timestamp = new Date().toISOString();
     console.group(`%c[SUCCESS] ${context}`, LOG_STYLES.success);
     console.log(`%cTimestamp: ${timestamp}`, LOG_STYLES.debug);
@@ -67,7 +77,7 @@ export const logger = {
   },
 
   debug: (context, message, data = null) => {
-    if (import.meta.env.MODE !== 'development') return;
+    if (!IS_DEVELOPMENT) return;
     
     const timestamp = new Date().toISOString();
     console.group(`%c[DEBUG] ${context}`, LOG_STYLES.debug);
