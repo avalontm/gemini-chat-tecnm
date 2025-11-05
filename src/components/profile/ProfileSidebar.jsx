@@ -1,12 +1,13 @@
 // src/components/profile/ProfileSidebar.jsx
 
-import { User, Shield, Palette, Bell, Globe } from 'lucide-react';
+import { User, Shield, Palette, Bell, Globe, Key } from 'lucide-react';
 
 const ProfileSidebar = ({ activeTab, onTabChange }) => {
   // Tabs de configuración
   const tabs = [
     { id: 'profile', label: 'Perfil', icon: User },
     { id: 'security', label: 'Seguridad', icon: Shield },
+    { id: 'apikey', label: 'API Key', icon: Key },
     { id: 'appearance', label: 'Apariencia', icon: Palette },
     { id: 'notifications', label: 'Notificaciones', icon: Bell },
     { id: 'language', label: 'Idioma', icon: Globe },

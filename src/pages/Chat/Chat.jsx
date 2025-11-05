@@ -1,6 +1,5 @@
-// src/pages/Chat/Chat.jsx
-
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -16,14 +15,31 @@ import {
   ChatInput
 } from '@components/Chat';
 
+// ==================== CONSTANTES ====================
+
+const WELCOME_MESSAGE = {
+  id: 'welcome',
+  type: 'ai',
+  content: 'Saludos. Soy el sistema de asistencia con inteligencia artificial del Tecnológico Nacional de México, Campus Ensenada. Mi propósito es brindarte apoyo en consultas académicas, investigación, desarrollo de proyectos y orientación estudiantil. ¿En qué tema requiere asistencia?',
+  timestamp: new Date(),
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILES = 5;
+const SAFETY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+
+// ==================== COMPONENTE PRINCIPAL ====================
+
 function Chat() {
   const navigate = useNavigate();
   const { conversationId } = useParams();
   const { user, token, isAuthenticated, logout } = useAuth();
 
+  // Refs
   const abortControllerRef = useRef(null);
   const isCreatingConversationRef = useRef(false);
 
+  // Estados principales
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -51,60 +67,23 @@ function Chat() {
     }
   }, [isAuthenticated]);
 
-  // ==================== CONVERSACIÓN ACTIVA ====================
-
-  useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-    }
-
-    if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
-      loadConversation(conversationId);
-    } else {
-      setMessages([{
-        id: 'welcome',
-        type: 'ai',
-        content: 'Saludos. Soy el sistema de asistencia con inteligencia artificial del Tecnológico Nacional de México, Campus Ensenada. Mi propósito es brindarte apoyo en consultas académicas, investigación, desarrollo de proyectos y orientación estudiantil. ¿En qué tema requiere asistencia?',
-        timestamp: new Date(),
-      }]);
-      setCurrentConversation(null);
-    }
-
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    };
-  }, [conversationId]);
-
-  // ==================== FUNCIONES DE CONVERSACIONES ====================
-
   const loadConversations = useCallback(async () => {
     try {
       setIsLoadingConversations(true);
-      
       const response = await conversationAPI.getConversations(1, 50);
-      console.log('[CHAT] Response completo:', response);
-      console.log('[CHAT] response.data:', response.data);
       
       let conversationsList = [];
       
       if (response.data) {
         if (response.data.data?.conversations && Array.isArray(response.data.data.conversations)) {
           conversationsList = response.data.data.conversations;
-        }
-        else if (response.data.conversations && Array.isArray(response.data.conversations)) {
+        } else if (response.data.conversations && Array.isArray(response.data.conversations)) {
           conversationsList = response.data.conversations;
-        }
-        else if (Array.isArray(response.data)) {
+        } else if (Array.isArray(response.data)) {
           conversationsList = response.data;
         }
       }
       
-      console.log('[CHAT] Conversaciones procesadas:', conversationsList.length);
       setConversations(conversationsList);
     } catch (error) {
       console.error('[CHAT] Error cargando conversaciones:', error);
@@ -119,6 +98,30 @@ function Chat() {
     }
   }, [navigate]);
 
+  // ==================== CONVERSACIÓN ACTIVA ====================
+
+  useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsStreaming(false);
+    }
+
+    if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
+      loadConversation(conversationId);
+    } else {
+      setMessages([WELCOME_MESSAGE]);
+      setCurrentConversation(null);
+    }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, [conversationId]);
+
   const loadConversation = useCallback(async (convId) => {
     if (!convId || convId === 'undefined' || convId === 'null') {
       return;
@@ -126,11 +129,7 @@ function Chat() {
 
     try {
       setIsLoading(true);
-      console.log('[CHAT] Cargando conversación:', convId);
-      
       const response = await conversationAPI.getConversation(convId);
-      console.log('[CHAT] Response completo:', response);
-      console.log('[CHAT] response.data:', response.data);
       
       if (!response.data) {
         throw new Error('No se recibieron datos de la conversación');
@@ -150,9 +149,6 @@ function Chat() {
         messagesData = response.data.messages || [];
       }
 
-      console.log('[CHAT] Conversación extraída:', conversation);
-      console.log('[CHAT] Mensajes extraídos:', messagesData.length);
-
       if (!conversation) {
         throw new Error('No se pudo extraer la conversación de la respuesta');
       }
@@ -169,11 +165,9 @@ function Chat() {
         isStreaming: false
       }));
       
-      console.log('[CHAT] Mensajes formateados:', formattedMessages.length);
       setMessages(formattedMessages);
     } catch (error) {
       console.error('[CHAT] Error cargando conversación:', error);
-      console.error('[CHAT] Error response:', error.response);
       
       if (error.response?.status === 404) {
         toast.error('Conversación no encontrada');
@@ -192,21 +186,16 @@ function Chat() {
     }
   }, [navigate]);
 
+  // ==================== GESTIÓN DE CONVERSACIONES ====================
+
   const handleNewConversation = useCallback(() => {
-    console.log('[CHAT] Nueva conversación');
-    
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsStreaming(false);
     }
 
-    setMessages([{
-      id: 'welcome',
-      type: 'ai',
-      content: 'Hola! Soy tu asistente de IA powered by Google Gemini. En que puedo ayudarte hoy?',
-      timestamp: new Date(),
-    }]);
+    setMessages([WELCOME_MESSAGE]);
     setCurrentConversation(null);
     setSelectedFiles([]);
     setIsLoading(false);
@@ -217,11 +206,10 @@ function Chat() {
   const handleDeleteConversation = useCallback(async (convId) => {
     if (!convId) return;
 
-    const confirmDelete = window.confirm('Estas seguro de que deseas eliminar esta conversación?');
+    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar esta conversación?');
     if (!confirmDelete) return;
 
     try {
-      console.log('[CHAT] Eliminando conversación:', convId);
       await conversationAPI.deleteConversation(convId);
       
       setConversations(prev => 
@@ -240,25 +228,19 @@ function Chat() {
     }
   }, [currentConversation, handleNewConversation]);
 
-  // ==================== CREAR CONVERSACIÓN ====================
-
   const createNewConversation = useCallback(async (firstMessage) => {
     if (isCreatingConversationRef.current) {
-      console.log('[CHAT] Ya se está creando una conversación, esperando...');
       return null;
     }
 
     try {
       isCreatingConversationRef.current = true;
-      console.log('[CHAT] Creando nueva conversación con mensaje:', firstMessage.substring(0, 50));
       
       const title = firstMessage.length > 50 
         ? firstMessage.substring(0, 50) + '...'
         : firstMessage;
       
       const response = await conversationAPI.createConversation(title, firstMessage);
-      console.log('[CHAT] Conversación creada - Response completo:', response);
-      console.log('[CHAT] response.data:', response.data);
       
       let newConversation = null;
       
@@ -273,13 +255,8 @@ function Chat() {
       }
       
       if (!newConversation) {
-        console.error('[CHAT] No se pudo extraer la conversación de la respuesta:', response);
         throw new Error('Formato de respuesta inválido al crear conversación');
       }
-      
-      const conversationId = newConversation.id || newConversation._id;
-      console.log('[CHAT] Conversación creada exitosamente. ID:', conversationId);
-      console.log('[CHAT] Conversación completa:', newConversation);
       
       setCurrentConversation(newConversation);
       setConversations(prev => [newConversation, ...prev]);
@@ -288,22 +265,17 @@ function Chat() {
       
     } catch (error) {
       console.error('[CHAT] Error creando conversación:', error);
-      console.error('[CHAT] Error response:', error.response);
-      console.error('[CHAT] Error data:', error.response?.data);
       throw error;
     } finally {
       isCreatingConversationRef.current = false;
     }
   }, []);
 
-  // ==================== FUNCIONES DE ARCHIVOS ====================
+  // ==================== GESTIÓN DE ARCHIVOS ====================
 
   const handleFileSelect = useCallback((e, type = 'file') => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
-    const MAX_FILE_SIZE = 10 * 1024 * 1024;
-    const MAX_FILES = 5;
 
     if (selectedFiles.length + files.length > MAX_FILES) {
       toast.error(`Máximo ${MAX_FILES} archivos permitidos`);
@@ -346,14 +318,7 @@ function Chat() {
 
   // ==================== ENVIAR MENSAJE CON STREAMING ====================
 
-const handleSendMessage = useCallback(async (messageContent) => {
-    console.log('='.repeat(50));
-    console.log('[CHAT] handleSendMessage llamado');
-    console.log('[CHAT] Contenido:', messageContent?.substring(0, 100));
-    console.log('[CHAT] Archivos:', selectedFiles.length);
-    console.log('[CHAT] Conversación actual:', currentConversation?.id || currentConversation?._id || 'NINGUNA');
-    console.log('='.repeat(50));
-
+  const handleSendMessage = useCallback(async (messageContent) => {
     if ((!messageContent || !messageContent.trim()) && selectedFiles.length === 0) {
       toast.error('Por favor, escribe un mensaje o adjunta un archivo');
       return;
@@ -365,7 +330,6 @@ const handleSendMessage = useCallback(async (messageContent) => {
     }
 
     const trimmedContent = messageContent?.trim() || '';
-
     const userMessageId = `user-${Date.now()}`;
     const aiMessageId = `ai-${Date.now()}`;
 
@@ -379,12 +343,11 @@ const handleSendMessage = useCallback(async (messageContent) => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    setIsStreaming(true);
+    setIsStreaming(false);
 
     const filesForRequest = [...selectedFiles];
     setSelectedFiles([]);
 
-    // TIMEOUT DE SEGURIDAD: Limpiar estados después de 5 minutos
     const safetyTimeoutId = setTimeout(() => {
       console.warn('[CHAT] TIMEOUT DE SEGURIDAD: Limpiando estados después de 5 minutos');
       setIsStreaming(false);
@@ -397,98 +360,104 @@ const handleSendMessage = useCallback(async (messageContent) => {
             : msg
         )
       );
-    }, 5 * 60 * 1000); // 5 minutos
+    }, SAFETY_TIMEOUT);
 
     try {
       let convId = currentConversation?.id || currentConversation?._id;
-      console.log('[CHAT] ConversationId inicial:', convId || 'NINGUNO');
-      console.log('[CHAT] ConversationId para envío:', convId || 'null (backend creará nueva)');
-
-      const config = {
-        temperature: temperature
-      };
+      const config = { temperature };
 
       let placeholderAdded = false;
       let completeCalled = false;
 
       const handleChunk = (chunk, accumulated) => {
-        if (!placeholderAdded) {
-          console.log('[CHAT] Primer chunk recibido, agregando placeholder IA');
-          placeholderAdded = true;
-          
-          setMessages(prev => [...prev, {
-            id: aiMessageId,
-            type: 'ai',
-            content: accumulated,
-            timestamp: new Date(),
-            isStreaming: true,
-          }]);
-        } else {
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === aiMessageId 
-                ? { ...msg, content: accumulated, isStreaming: true }
-                : msg
-            )
-          );
-        }
-      };
+  if (!placeholderAdded) {
+    placeholderAdded = true;
+    
+    flushSync(() => {
+      setIsLoading(false);
+      setIsStreaming(true);
+    });
+    
+    flushSync(() => {
+      setMessages(prev => [...prev, {
+        id: aiMessageId,
+        type: 'ai',
+        content: accumulated,
+        timestamp: new Date(),
+        isStreaming: true,
+      }]);
+    });
+  } else {
+    flushSync(() => {
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === aiMessageId 
+            ? { 
+                ...msg, 
+                content: accumulated, 
+                isStreaming: true  // Mantener true durante streaming
+              }
+            : msg
+        )
+      );
+    });
+  }
+};
 
-      const handleComplete = (data) => {
-        if (completeCalled) {
-          console.warn('[CHAT] handleComplete ya fue llamado, ignorando llamada duplicada');
-          return;
-        }
-        completeCalled = true;
-        
-        console.log('[CHAT] ========== handleComplete ==========');
-        console.log('[CHAT] Data recibida:', data);
-        
-        clearTimeout(safetyTimeoutId);
-        
-        const { conversation, messageId } = data;
-        
-        setIsStreaming(false);
-        setIsLoading(false);
-        
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === aiMessageId 
-              ? { ...msg, isStreaming: false, id: messageId || msg.id }
-              : msg
-          )
-        );
-
-        if (conversation) {
-          console.log('[CHAT] Actualizando conversación desde stream:', conversation);
-          const newConvId = conversation.id || conversation._id;
-          
-          setCurrentConversation(conversation);
-          
-          setConversations(prev => {
-            const exists = prev.some(c => (c.id || c._id) === newConvId);
-            if (exists) {
-              return prev.map(c => 
-                (c.id || c._id) === newConvId ? conversation : c
-              );
+const handleComplete = (data) => {
+  if (completeCalled) return;
+  completeCalled = true;
+  
+  clearTimeout(safetyTimeoutId);
+  
+  const { conversation, messageId } = data;
+  
+  // IMPORTANTE: Primero actualizar estados globales
+  setIsStreaming(false);
+  setIsLoading(false);
+  
+  // Actualizar el mensaje y asegurar que isStreaming sea false
+  // Usar setTimeout para garantizar que React procese el cambio
+  setTimeout(() => {
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === aiMessageId 
+          ? { 
+              ...msg, 
+              content: msg.content, // Mantener el contenido acumulado
+              isStreaming: false,   // CRITICO: Cambiar a false para procesar tablas
+              id: messageId || msg.id,
+              timestamp: msg.timestamp || new Date()
             }
-            return [conversation, ...prev];
-          });
-          
-          if (!convId) {
-            console.log('[CHAT] Navegando a nueva conversación:', newConvId);
-            navigate(`/chat/${newConvId}`, { replace: true });
-          }
-        }
+          : msg
+      )
+    );
+  }, 150);
 
-        loadConversations();
-        console.log('[CHAT] ========== handleComplete FINALIZADO ==========');
-      };
+  if (conversation) {
+    const newConvId = conversation.id || conversation._id;
+    
+    setCurrentConversation(conversation);
+    
+    setConversations(prev => {
+      const exists = prev.some(c => (c.id || c._id) === newConvId);
+      if (exists) {
+        return prev.map(c => 
+          (c.id || c._id) === newConvId ? conversation : c
+        );
+      }
+      return [conversation, ...prev];
+    });
+    
+    if (!convId) {
+      navigate(`/chat/${newConvId}`, { replace: true });
+    }
+  }
+
+  loadConversations();
+};
 
       const handleError = (error) => {
-        console.error('[CHAT] ========== handleError ==========');
-        console.error('[CHAT] Error:', error);
-        
         clearTimeout(safetyTimeoutId);
         
         setIsStreaming(false);
@@ -517,20 +486,14 @@ const handleSendMessage = useCallback(async (messageContent) => {
         }
         
         toast.error(errorMessage);
-        
-        console.error('[CHAT] ========== handleError FINALIZADO ==========');
       };
 
-      console.log('[CHAT] Enviando mensaje al backend...');
       if (filesForRequest.length > 0) {
-        console.log('[CHAT] Tipo: Multimodal con', filesForRequest.length, 'archivos');
-        
         const formData = new FormData();
         formData.append('prompt', trimmedContent || 'Analiza estos archivos');
         
         if (convId) {
           formData.append('conversationId', convId);
-          console.log('[CHAT] conversationId agregado al FormData:', convId);
         }
         
         filesForRequest.forEach((file) => {
@@ -545,10 +508,8 @@ const handleSendMessage = useCallback(async (messageContent) => {
           config
         );
         
-        // FALLBACK: Si después de 2 segundos no se llamó handleComplete
         setTimeout(() => {
           if (!completeCalled && placeholderAdded) {
-            console.warn('[CHAT] FALLBACK: handleComplete no fue llamado, ejecutando manualmente');
             handleComplete({
               fullResponse: '',
               conversationId: convId,
@@ -559,9 +520,6 @@ const handleSendMessage = useCallback(async (messageContent) => {
         }, 2000);
         
       } else {
-        console.log('[CHAT] Tipo: Texto plano');
-        console.log('[CHAT] conversationId para texto:', convId || 'null');
-        
         await geminiAPI.sendTextStream(
           trimmedContent,
           convId || null,
@@ -571,10 +529,8 @@ const handleSendMessage = useCallback(async (messageContent) => {
           config
         );
         
-        // FALLBACK para texto también
         setTimeout(() => {
           if (!completeCalled && placeholderAdded) {
-            console.warn('[CHAT] FALLBACK: handleComplete no fue llamado, ejecutando manualmente');
             handleComplete({
               fullResponse: '',
               conversationId: convId,
@@ -586,9 +542,7 @@ const handleSendMessage = useCallback(async (messageContent) => {
       }
 
     } catch (error) {
-      console.error('[CHAT] ========== ERROR NO MANEJADO ==========');
       console.error('[CHAT] Error:', error);
-      console.error('[CHAT] Error stack:', error.stack);
       
       clearTimeout(safetyTimeoutId);
       
@@ -614,16 +568,13 @@ const handleSendMessage = useCallback(async (messageContent) => {
         || 'Error al enviar el mensaje';
       
       toast.error(errorMessage);
-      
-      console.error('[CHAT] ========== ERROR FINALIZADO ==========');
     }
-  }, [selectedFiles, currentConversation, navigate, loadConversations, temperature, isStreaming, createNewConversation]);
+  }, [selectedFiles, currentConversation, navigate, loadConversations, temperature, isStreaming]);
   
   // ==================== CANCELAR STREAMING ====================
 
   const handleCancelStreaming = useCallback(() => {
     if (isStreaming && abortControllerRef.current) {
-      console.log('[CHAT] Cancelando streaming...');
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsStreaming(false);
@@ -632,7 +583,7 @@ const handleSendMessage = useCallback(async (messageContent) => {
     }
   }, [isStreaming]);
 
-  // ==================== FUNCIÓN DE LOGOUT ====================
+  // ==================== LOGOUT ====================
 
   const handleLogout = useCallback(() => {
     logout();
@@ -665,7 +616,6 @@ const handleSendMessage = useCallback(async (messageContent) => {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
-      
       <ChatSidebar
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
@@ -680,7 +630,6 @@ const handleSendMessage = useCallback(async (messageContent) => {
       />
 
       <main className="flex-1 flex flex-col min-w-0">
-        
         <ChatHeader
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}

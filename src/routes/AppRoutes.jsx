@@ -8,6 +8,8 @@ import { SITE_CONFIG } from '@config/constants';
 import Home from '@pages/Home';
 import Login from '@pages/Login';
 import Register from '@pages/Register';
+import ForgotPassword from '@pages/ForgotPassword';
+import ResetPassword from '@pages/ResetPassword';
 import Chat from '@pages/Chat';
 import Profile from '@pages/Profile';
 import Terms from '@pages/Terms';
@@ -52,6 +54,29 @@ function AppRoutes() {
             <Navigate to={SITE_CONFIG.routes.chat} replace />
           ) : (
             <Register />
+          )
+        } 
+      />
+
+      {/* Rutas de Recuperación de Contraseña */}
+      <Route 
+        path={SITE_CONFIG.routes.forgotPassword} 
+        element={
+          isAuthenticated ? (
+            <Navigate to={SITE_CONFIG.routes.chat} replace />
+          ) : (
+            <ForgotPassword />
+          )
+        } 
+      />
+
+      <Route 
+        path="/reset-password/:token" 
+        element={
+          isAuthenticated ? (
+            <Navigate to={SITE_CONFIG.routes.chat} replace />
+          ) : (
+            <ResetPassword />
           )
         } 
       />

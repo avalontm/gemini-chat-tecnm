@@ -13,6 +13,7 @@ import {
   ProfileSidebar,
   ProfileTab,
   SecurityTab,
+  ApiKeyTab,
   AppearanceTab,
   NotificationsTab,
   LanguageTab
@@ -275,6 +276,9 @@ function Profile() {
             isSaving={isSaving}
           />
         );
+
+      case 'apikey':
+        return <ApiKeyTab />;
 
       case 'appearance':
         return (

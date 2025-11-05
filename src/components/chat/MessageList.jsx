@@ -21,14 +21,6 @@ function MessageList({ messages, isLoading, formatTime }) {
   // Solo mostrar TypingIndicator si isLoading es true Y NO hay mensaje streaming
   const shouldShowTypingIndicator = isLoading && !hasStreamingMessage;
 
-  console.log('[MESSAGE LIST] Estado:', {
-    isLoading,
-    hasStreamingMessage,
-    shouldShowTypingIndicator,
-    messagesCount: messages.length,
-    lastMessage: messages[messages.length - 1]
-  });
-
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {messages.map((message) => (

@@ -5,10 +5,10 @@ import { useAuth } from '@context/AuthContext';
 import { SITE_CONFIG } from '@config/constants';
 
 function PrivateRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
-  // Mostrar loader mientras se verifica la autenticación
-  if (isLoading) {
+  // Mostrar loader mientras se verifica la autenticacion
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
         <div className="text-center">
@@ -19,12 +19,12 @@ function PrivateRoute({ children }) {
     );
   }
 
-  // Si no está autenticado, redirigir al login
+  // Si no esta autenticado, redirigir al login
   if (!isAuthenticated) {
     return <Navigate to={SITE_CONFIG.routes.login} replace />;
   }
 
-  // Si está autenticado, mostrar el componente hijo
+  // Si esta autenticado, mostrar el componente hijo
   return children;
 }
 

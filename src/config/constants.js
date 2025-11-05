@@ -112,6 +112,28 @@ export const SITE_CONFIG = {
       and: 'y',
       privacyLink: 'Política de Privacidad',
     },
+    forgotPassword: {
+      title: 'Recuperar Contraseña',
+      subtitle: 'Ingresa tu correo para recibir instrucciones',
+      emailLabel: 'Correo Electrónico',
+      emailPlaceholder: 'al23760194@ite.edu.mx',
+      submitButton: 'Enviar Instrucciones',
+      backToLogin: 'Volver al inicio de sesión',
+      successMessage: 'Revisa tu correo para continuar',
+      instructions: 'Te enviaremos un correo con instrucciones para restablecer tu contraseña.',
+    },
+    resetPassword: {
+      title: 'Nueva Contraseña',
+      subtitle: 'Ingresa tu nueva contraseña',
+      passwordLabel: 'Nueva Contraseña',
+      passwordPlaceholder: '••••••••',
+      confirmPasswordLabel: 'Confirmar Contraseña',
+      confirmPasswordPlaceholder: '••••••••',
+      submitButton: 'Restablecer Contraseña',
+      backToLogin: 'Volver al inicio de sesión',
+      successMessage: 'Contraseña actualizada exitosamente',
+      tokenExpired: 'El enlace ha expirado. Solicita uno nuevo.',
+    },
   },
 
   // Mensajes del chat
@@ -155,7 +177,7 @@ export const SITE_CONFIG = {
 
   // Configuración de la aplicación
   app: {
-    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxFileSize: 10 * 1024 * 1024,
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     allowedDocTypes: ['application/pdf', 'text/plain', 'application/msword'],
     maxMessageLength: 4000,
@@ -167,6 +189,8 @@ export const SITE_CONFIG = {
     home: '/',
     login: '/login',
     register: '/register',
+    forgotPassword: '/forgot-password',
+    resetPassword: '/reset-password/:token',
     chat: '/chat',
     profile: '/profile',
     settings: '/settings',

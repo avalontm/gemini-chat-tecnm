@@ -23,15 +23,7 @@ function ChatInput({
   const dropZoneRef = useRef(null);
   const stackRef = useRef(null);
 
-  console.log('[CHAT INPUT] Estado:', {
-    inputMessage: inputMessage.substring(0, 50),
-    messageLength: inputMessage.length,
-    selectedFilesCount: selectedFiles.length,
-    isLoading,
-    disabled
-  });
-
-  // ==================== UTILIDADES ====================
+  // UTILIDADES
   
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
@@ -45,17 +37,16 @@ function ChatInput({
     adjustTextareaHeight();
   }, [inputMessage]);
 
-  // Focus automático al montar
+  // Focus automatico al montar
   useEffect(() => {
     if (textareaRef.current && !isLoading && !disabled) {
       textareaRef.current.focus();
     }
   }, [isLoading, disabled]);
 
-  // ==================== PREVIEWS DE IMÁGENES ====================
+  // PREVIEWS DE IMAGENES
   
   useEffect(() => {
-    // Generar previews para imágenes
     const newPreviews = [];
     const imageFiles = selectedFiles.filter(file => file.type.startsWith('image/'));
     
@@ -73,7 +64,7 @@ function ChatInput({
     }
   }, [selectedFiles]);
 
-  // ==================== DRAG & DROP ====================
+  // DRAG & DROP
   
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -87,7 +78,6 @@ function ChatInput({
     e.preventDefault();
     e.stopPropagation();
     
-    // Solo desactivar si salimos del dropZone completamente
     if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget)) {
       setIsDragging(false);
     }
@@ -107,7 +97,6 @@ function ChatInput({
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      // Simular evento de input para reutilizar la lógica existente
       const mockEvent = {
         target: {
           files: files,
@@ -135,7 +124,7 @@ function ChatInput({
     };
   }, [isLoading, disabled, selectedFiles]);
 
-  // ==================== CLICK OUTSIDE PARA CERRAR STACK ====================
+  // CLICK OUTSIDE PARA CERRAR STACK
   
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -153,39 +142,24 @@ function ChatInput({
     };
   }, [isStackExpanded]);
 
-  // ==================== HANDLERS ====================
+  // HANDLERS
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    console.log('[CHAT INPUT] Submit disparado');
-    console.log('[CHAT INPUT] Input message:', inputMessage);
-    console.log('[CHAT INPUT] Input trimmed:', inputMessage.trim());
-    console.log('[CHAT INPUT] Files:', selectedFiles.length);
-    
     const trimmedMessage = inputMessage.trim();
     
     if (!trimmedMessage && selectedFiles.length === 0) {
-      console.warn('[CHAT INPUT] No hay mensaje ni archivos para enviar');
       return;
     }
 
     if (isLoading || disabled) {
-      console.warn('[CHAT INPUT] Bloqueado - isLoading:', isLoading, 'disabled:', disabled);
       return;
     }
-
-    console.log('[CHAT INPUT] Enviando mensaje:', trimmedMessage);
-    console.log('[CHAT INPUT] Llamando onSendMessage...');
     
-    // Enviar mensaje
     onSendMessage(trimmedMessage);
-    
-    // Limpiar input
     setInputMessage('');
-    console.log('[CHAT INPUT] Input limpiado');
     
-    // Reset altura del textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -193,20 +167,16 @@ function ChatInput({
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      console.log('[CHAT INPUT] Enter presionado (sin Shift)');
       e.preventDefault();
       handleSubmit(e);
     }
   };
 
   const handleInputChange = (e) => {
-    const newValue = e.target.value;
-    console.log('[CHAT INPUT] Input change, nueva longitud:', newValue.length);
-    setInputMessage(newValue);
+    setInputMessage(e.target.value);
   };
 
   const handleFileButtonClick = (type) => {
-    console.log('[CHAT INPUT] Botón de archivo clickeado:', type);
     if (type === 'image') {
       imageInputRef.current?.click();
     } else {
@@ -215,34 +185,26 @@ function ChatInput({
   };
 
   const handleFileInputChange = (e, type) => {
-    console.log('[CHAT INPUT] Archivos seleccionados:', e.target.files.length, 'tipo:', type);
     if (onFileSelect) {
       onFileSelect(e, type);
     }
   };
 
   const handleRemoveFileClick = (index) => {
-    console.log('[CHAT INPUT] Removiendo archivo en índice:', index);
     if (onRemoveFile) {
       onRemoveFile(index);
     }
-    // Si solo queda un archivo y se elimina, cerrar el stack
     if (selectedFiles.length === 1) {
       setIsStackExpanded(false);
     }
   };
 
   const handleVoiceTranscript = (transcript) => {
-    console.log('[CHAT INPUT] Transcripción recibida:', transcript);
-    
-    // Agregar el texto transcrito al input actual
     const newValue = inputMessage ? `${inputMessage} ${transcript}` : transcript;
     setInputMessage(newValue);
     
-    // Focus en el textarea para que el usuario pueda editar
     if (textareaRef.current) {
       textareaRef.current.focus();
-      // Mover cursor al final
       setTimeout(() => {
         textareaRef.current.selectionStart = newValue.length;
         textareaRef.current.selectionEnd = newValue.length;
@@ -254,7 +216,6 @@ function ChatInput({
     setIsStackExpanded(!isStackExpanded);
   };
 
-  // Calcular escala con efecto de magnificación estilo macOS
   const getItemScale = (index) => {
     if (!isStackExpanded || hoveredIndex === null) return 1;
     
@@ -277,9 +238,7 @@ function ChatInput({
 
   const canSubmit = (inputMessage.trim() || selectedFiles.length > 0) && !isLoading && !disabled;
 
-  console.log('[CHAT INPUT] Can submit:', canSubmit);
-
-  // ==================== RENDER ====================
+  // RENDER
 
   return (
     <div 
@@ -295,10 +254,10 @@ function ChatInput({
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border-4 border-blue-500 border-dashed">
             <Upload className="w-16 h-16 text-blue-600 mx-auto mb-4 animate-bounce" />
             <p className="text-xl font-semibold text-gray-900 dark:text-white text-center">
-              Suelta tus archivos aquí
+              Suelta tus archivos aqui
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">
-              Imágenes y PDFs soportados
+              Imagenes y PDFs soportados
             </p>
           </div>
         </div>
@@ -309,7 +268,7 @@ function ChatInput({
           {/* Stack de archivos estilo macOS Dock */}
           {selectedFiles.length > 0 && (
             <div className="mb-4 relative" ref={stackRef}>
-              {/* Stack contraído (siempre visible) */}
+              {/* Stack contraido (siempre visible) */}
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -368,7 +327,7 @@ function ChatInput({
                     transformOrigin: 'bottom left',
                   }}
                 >
-                  {/* Contenedor del Dock con padding extra para el botón X */}
+                  {/* Contenedor del Dock con padding extra para el boton X */}
                   <div className="relative pt-3 px-3">
                     <div 
                       className="inline-flex items-end gap-3 px-4 py-3 rounded-2xl border shadow-2xl"
@@ -495,7 +454,7 @@ function ChatInput({
               >
                 <Paperclip className="w-5 h-5" />
                 <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                  Imágenes y PDFs
+                  Imagenes y PDFs
                 </span>
               </button>
 
@@ -521,7 +480,7 @@ function ChatInput({
               />
             </div>
 
-            {/* Botón enviar */}
+            {/* Boton enviar */}
             <div className="pb-3">
               <button
                 type="submit"
@@ -553,16 +512,16 @@ function ChatInput({
             <div className="flex items-center gap-4">
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 <span className="hidden sm:inline">
-                  <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-slate-700 rounded text-xs font-mono">Enter</kbd> enviar • 
-                  <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-slate-700 rounded text-xs font-mono ml-1">Shift + Enter</kbd> línea
+                  <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-slate-700 rounded text-xs font-mono">Enter</kbd> enviar - 
+                  <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-slate-700 rounded text-xs font-mono ml-1">Shift + Enter</kbd> linea
                 </span>
-                <span className="sm:hidden">Enter: enviar • Shift+Enter: línea</span>
+                <span className="sm:hidden">Enter: enviar - Shift+Enter: linea</span>
               </p>
               
               {!isDragging && (
                 <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
                   <Upload className="w-3 h-3" />
-                  <span className="hidden md:inline">Arrastra archivos aquí</span>
+                  <span className="hidden md:inline">Arrastra archivos aqui</span>
                   <span className="md:hidden">Drag & drop</span>
                 </p>
               )}

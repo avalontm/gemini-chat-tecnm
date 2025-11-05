@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+// src/components/chat/MessageItem.jsx
+
+import { useMemo, useState, useEffect } from 'react';
 import { User, Sparkles, Copy, Check, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -65,28 +67,89 @@ function CodeBlock({ language, code }) {
   );
 }
 
-// Función para corregir tablas mal formateadas
+// Funcion para corregir tablas mal formateadas de Gemini
 function fixMalformedTable(content) {
-  const tableRegex = /(\|.*\|)\n(\|.*\|)\n(\|.*\|)/g;
+  const lines = content.split('\n');
+  const result = [];
+  let i = 0;
   
-  return content.replace(tableRegex, (match, headerRow, separatorRow, dataRow) => {
-    const headerColumns = headerRow.split('|').filter(col => col.trim() !== '');
-    const columnCount = headerColumns.length;
+  // Funciones auxiliares
+  const isTableLine = (line) => {
+    const trimmed = line.trim();
+    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length > 2;
+  };
+  
+  const isSeparatorLine = (line) => {
+    const trimmed = line.trim();
+    // Linea separadora: contiene |, -, espacios Y tiene al menos un "---"
+    // Acepta formatos: |---|---| o | --- | --- | o |---|---|---|---|
+    if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return false;
+    const content = trimmed.slice(1, -1); // Quitar pipes inicial/final
+    return /^[\s\-|]+$/.test(content) && content.includes('-');
+  };
+  
+  const normalizeLine = (line) => {
+    // Normalizar espaciado: | texto | texto |
+    return line.trim().replace(/\|\s*/g, '| ').replace(/\s*\|/g, ' |');
+  };
+  
+  const countColumns = (line) => {
+    return line.split('|').filter(cell => cell.trim() !== '').length;
+  };
+  
+  const generateSeparator = (columnCount) => {
+    return '| ' + Array(columnCount).fill('---').join(' | ') + ' |';
+  };
+  
+  while (i < lines.length) {
+    const line = lines[i];
     
-    const separatorColumns = separatorRow.split('|').filter(col => col.trim() !== '');
-    if (separatorColumns.length !== columnCount) {
-      const correctSeparator = '|' + Array(columnCount).fill('---').join('|') + '|';
-      return `${headerRow}\n${correctSeparator}\n${dataRow}`;
+    // Si no es linea de tabla, agregar tal cual
+    if (!isTableLine(line)) {
+      result.push(line);
+      i++;
+      continue;
     }
     
-    return match;
-  });
+    // Detectamos inicio de tabla (puede ser header o separador malformado)
+    // Si la primera linea es separador, buscar el header real
+    if (isSeparatorLine(line)) {
+      // Saltar todos los separadores iniciales basura
+      while (i < lines.length && isSeparatorLine(lines[i])) {
+        i++;
+      }
+      continue;
+    }
+    
+    // Header real encontrado
+    const headerLine = normalizeLine(line);
+    const columnCount = countColumns(headerLine);
+    
+    result.push(headerLine);
+    i++;
+    
+    // Saltar TODAS las lineas separadoras consecutivas (gemini pone 2-3)
+    while (i < lines.length && isSeparatorLine(lines[i])) {
+      i++;
+    }
+    
+    // Insertar UN SOLO separador correcto
+    result.push(generateSeparator(columnCount));
+    
+    // Procesar resto de filas de la tabla
+    while (i < lines.length && isTableLine(lines[i]) && !isSeparatorLine(lines[i])) {
+      result.push(normalizeLine(lines[i]));
+      i++;
+    }
+  }
+  
+  return result.join('\n');
 }
 
-// Función para limpiar URLs mal formateadas
+// Funcion para limpiar URLs mal formateadas
 function cleanMalformedUrls(content) {
   // Limpiar URLs con %5D (] encoded) y otras malformaciones
-  // Patrón: url%5D(url) o url](url)
+  // Patron: url%5D(url) o url](url)
   content = content.replace(/(https?:\/\/[^\s\)]+?)(?:%5D|\])\((https?:\/\/[^\s\)]+)\)/gi, '$1');
   
   // Limpiar URLs duplicadas en formato ![](url)](url)
@@ -95,16 +158,16 @@ function cleanMalformedUrls(content) {
   return content;
 }
 
-// Función para convertir URLs de imágenes en sintaxis Markdown
+// Funcion para convertir URLs de imagenes en sintaxis Markdown
 function convertImageUrlsToMarkdown(content) {
   // Primero limpiar URLs mal formateadas
   content = cleanMalformedUrls(content);
   
-  // NO convertir si ya está en formato Markdown: ![texto](url) o [texto](url)
+  // NO convertir si ya esta en formato Markdown: ![texto](url) o [texto](url)
   const imageUrlRegex = /(?<!\]\()(?<!\()(?<!src=["'])(?<!href=["'])(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s\)]*)?)/gi;
   
   return content.replace(imageUrlRegex, (match, offset) => {
-    // Verificar que no esté precedido por sintaxis Markdown
+    // Verificar que no este precedido por sintaxis Markdown
     const before = content.substring(Math.max(0, offset - 10), offset);
     if (before.includes('](') || before.includes('![')) {
       return match;
@@ -113,7 +176,7 @@ function convertImageUrlsToMarkdown(content) {
   });
 }
 
-// Función para mejorar el formato de listas
+// Funcion para mejorar el formato de listas
 function improveListFormatting(content) {
   const lines = content.split('\n');
   const processedLines = [];
@@ -131,7 +194,7 @@ function improveListFormatting(content) {
       line = line.replace(/^(\d+\.)/, '$1 ');
     }
     
-    // Detectar viñetas con guión sin espacio
+    // Detectar vinetas con guion sin espacio
     if (line.match(/^-[^\s-]/)) {
       line = line.replace(/^-/, '- ');
     }
@@ -142,11 +205,11 @@ function improveListFormatting(content) {
   return processedLines.join('\n');
 }
 
-// Función para procesar y limpiar el contenido del mensaje
+// Funcion para procesar y limpiar el contenido del mensaje
 function processMessageContent(content) {
   let processedContent = content;
   
-  // 1. Convertir URLs de imágenes a Markdown
+  // 1. Convertir URLs de imagenes a Markdown
   processedContent = convertImageUrlsToMarkdown(processedContent);
   
   // 2. Mejorar formato de listas
@@ -200,12 +263,28 @@ function processMessageContent(content) {
 function MessageItem({ message, formatTime }) {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const [forceProcess, setForceProcess] = useState(false);
 
-  // ⭐ FIX: Agregar message.isStreaming como dependencia
-  // Esto fuerza la re-renderización cuando el contenido cambia durante el streaming
+  // Forzar re-procesamiento cuando termine el streaming
+  useEffect(() => {
+    if (!message.isStreaming && message.content && message.content.includes('|')) {
+      setForceProcess(prev => !prev);
+    }
+  }, [message.isStreaming, message.content]);
+
+  // CRITICO: Procesar SIEMPRE para corregir tablas
+  // El useMemo se recalcula cada vez que cambia el contenido o isStreaming
   const processedContent = useMemo(() => {
-    return processMessageContent(message.content || '');
-  }, [message.content, message.isStreaming]); // ← Agregada dependencia
+    const content = message.content || '';
+    
+    // Si esta en streaming Y el contenido no tiene tablas, retornar raw
+    if (message.isStreaming && !content.includes('|')) {
+      return content;
+    }
+    
+    // Si tiene tablas O ya termino el streaming, procesar SIEMPRE
+    return processMessageContent(content);
+  }, [message.content, message.isStreaming, forceProcess]);
 
   const renderedContent = useMemo(() => {
     if (message.type === 'user') {
@@ -221,7 +300,7 @@ function MessageItem({ message, formatTime }) {
       <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-bold prose-p:leading-relaxed prose-ul:leading-relaxed prose-ol:leading-relaxed prose-li:leading-relaxed">
         <ReactMarkdown
           components={{
-            // ========== BLOQUES DE CÓDIGO ==========
+            // BLOQUES DE CODIGO
             code({ node, inline, className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
               const codeString = String(children).replace(/\n$/, '');
@@ -245,17 +324,15 @@ function MessageItem({ message, formatTime }) {
               );
             },
             
-            // Detectar URLs de texto plano y convertirlas en enlaces
+            // Detectar URLs de texto plano y convertirlas en enlaces + Cursor animado
             text({ node, children }) {
               if (typeof children !== 'string') return children;
               
-              // Regex más específico que excluye URLs ya en formato Markdown
+              // Regex mas especifico que excluye URLs ya en formato Markdown
               const urlRegex = /(?<!\]\()(?<!\[)(https?:\/\/[^\s\)]+?)(?=[\s,;.!?]|$)/g;
               const parts = children.split(urlRegex);
               
-              if (parts.length === 1) return children;
-              
-              return parts.map((part, index) => {
+              const result = parts.map((part, index) => {
                 if (part && part.match(/^https?:\/\//)) {
                   // No convertir si es una URL de imagen
                   if (part.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i)) {
@@ -276,11 +353,9 @@ function MessageItem({ message, formatTime }) {
                 }
                 return part;
               });
-            },
-            
-            // Cursor animado durante streaming
-            text({ children }) {
-              if (message.isStreaming && typeof children === 'string') {
+              
+              // Agregar cursor animado al final si esta en streaming
+              if (message.isStreaming && parts.length === 1) {
                 return (
                   <>
                     {children}
@@ -293,14 +368,15 @@ function MessageItem({ message, formatTime }) {
                   </>
                 );
               }
-              return children;
+              
+              return result.length === 1 ? children : result;
             },
 
             pre({ children }) {
               return <div className="my-0">{children}</div>;
             },
 
-            // ========== ELEMENTOS DE TEXTO ==========
+            // ELEMENTOS DE TEXTO
             p({ children }) {
               return <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>;
             },
@@ -317,7 +393,7 @@ function MessageItem({ message, formatTime }) {
               return <li className="mb-1 leading-relaxed">{children}</li>;
             },
 
-            // ========== ENCABEZADOS ==========
+            // ENCABEZADOS
             h1({ children }) {
               return <h1 className="text-2xl font-bold mb-4 mt-6 text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-600 pb-2">{children}</h1>;
             },
@@ -337,7 +413,7 @@ function MessageItem({ message, formatTime }) {
               return <h6 className="text-xs font-bold mb-2 mt-3 text-gray-900 dark:text-white uppercase text-gray-500 dark:text-gray-400">{children}</h6>;
             },
 
-            // ========== CITAS Y LÍNEAS ==========
+            // CITAS Y LINEAS
             blockquote({ children }) {
               return (
                 <blockquote className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 py-2 my-4 italic bg-blue-50 dark:bg-blue-900/20 rounded-r text-gray-700 dark:text-gray-300">
@@ -350,7 +426,7 @@ function MessageItem({ message, formatTime }) {
               return <hr className="my-6 border-gray-300 dark:border-slate-600" />;
             },
 
-            // ========== ENLACES ==========
+            // ENLACES
             a({ href, children }) {
               const isExternal = href?.startsWith('http');
               return (
@@ -366,7 +442,7 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // ========== TABLAS MEJORADAS ==========
+            // TABLAS MEJORADAS
             table({ children }) {
               return (
                 <div className="overflow-x-auto my-4 border border-gray-200 dark:border-slate-600 rounded-lg shadow-sm">
@@ -427,7 +503,7 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // ========== IMÁGENES ==========
+            // IMAGENES
             img({ src, alt, title }) {
               return (
                 <div className="my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-600">
@@ -448,7 +524,7 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // ========== ELEMENTOS DE ÉNFASIS ==========
+            // ELEMENTOS DE ENFASIS
             strong({ children }) {
               return <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>;
             },
@@ -457,7 +533,7 @@ function MessageItem({ message, formatTime }) {
               return <em className="italic text-gray-800 dark:text-gray-200">{children}</em>;
             },
 
-            // ========== LISTAS DE TAREAS ==========
+            // LISTAS DE TAREAS
             input({ checked, type }) {
               if (type === 'checkbox') {
                 return (
@@ -494,7 +570,7 @@ function MessageItem({ message, formatTime }) {
           <div className="w-8 h-8 flex items-center justify-center">
             <img 
               src={theme === 'dark' ? '/ite_dark.svg' : '/ite_light.svg'}
-              alt="Instituto Tecnológico de Ensenada"
+              alt="Instituto Tecnologico de Ensenada"
               className="w-full h-full object-contain"
               onError={(e) => {
                 e.target.style.display = 'none';

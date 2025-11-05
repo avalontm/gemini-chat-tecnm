@@ -20,7 +20,6 @@ export const geminiAPI = {
       
       const payload = { prompt };
       
-      // Validar y agregar conversationId
       if (conversationId && 
           conversationId !== 'null' && 
           conversationId !== 'undefined' &&
@@ -29,7 +28,6 @@ export const geminiAPI = {
         payload.conversationId = conversationId;
       }
 
-      // Agregar configuración
       if (config && Object.keys(config).length > 0) {
         payload.config = {
           temperature: config.temperature || 0.7,
@@ -50,348 +48,326 @@ export const geminiAPI = {
     }
   },
 
-/**
- * Enviar mensaje de texto con streaming
- */
-sendTextStream: async (
-  prompt, 
-  conversationId = null, 
-  onChunk, 
-  onComplete, 
-  onError,
-  config = {}
-) => {
-  const context = 'GEMINI_API.sendTextStream';
-  
-  logger.info(context, 'Iniciando streaming', {
-    prompt: prompt?.substring(0, 100),
-    conversationId,
-    config
-  });
-
-  try {
-    // Obtener token
-    const token = localStorage.getItem(getStorageKey('token'));
-    logger.debug(context, 'Token verificado', { 
-      present: !!token,
-      key: getStorageKey('token')
-    });
+  /**
+   * Enviar mensaje de texto con streaming
+   */
+  sendTextStream: async (
+    prompt, 
+    conversationId = null, 
+    onChunk, 
+    onComplete, 
+    onError,
+    config = {}
+  ) => {
+    const context = 'GEMINI_API.sendTextStream';
     
-    if (!token) {
-      const error = new Error('No hay token de autenticación');
-      logger.error(context, error.message);
-      throw error;
-    }
-
-    // Base URL
-    const baseURL = api.defaults.baseURL || 'http://localhost:5000';
-    logger.debug(context, 'URL base configurada', { baseURL });
-    
-    // Preparar payload
-    const payload = { prompt };
-    
-    if (conversationId && 
-        conversationId !== 'null' && 
-        conversationId !== 'undefined' &&
-        typeof conversationId === 'string' &&
-        conversationId.trim().length > 0) {
-      payload.conversationId = conversationId;
-      logger.debug(context, 'ConversationId agregado', { conversationId });
-    } else {
-      logger.debug(context, 'Sin conversationId (nueva conversación)');
-    }
-
-    // Configuración
-    payload.config = {
-      temperature: config.temperature || 0.7,
-      ...config
-    };
-
-    logger.debug(context, 'Payload preparado', payload);
-
-    const url = `${baseURL}/api/gemini/text/stream`;
-    logger.info(context, 'Iniciando fetch', { url });
-
-    // Fetch con streaming
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
+    logger.info(context, 'Iniciando streaming', {
+      prompt: prompt?.substring(0, 100),
+      conversationId,
+      config
     });
 
-    logger.debug(context, 'Response recibida', { 
-      status: response.status,
-      ok: response.ok,
-      statusText: response.statusText,
-      contentType: response.headers.get('content-type')
-    });
-
-    // Verificar respuesta
-    if (!response.ok) {
-      logger.error(context, 'Response not OK', { status: response.status });
-      
-      let errorMessage = 'Error en streaming';
-      let errorDetails = null;
-      let validationErrors = null;
-      
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-        errorDetails = errorData.details || errorData.error;
-        validationErrors = errorData.errors;
-        
-        logger.error(context, 'Error del servidor', {
-          status: response.status,
-          message: errorMessage,
-          details: errorDetails,
-          validationErrors
-        });
-      } catch (e) {
-        logger.error(context, 'No se pudo parsear error JSON');
-      }
-      
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.details = errorDetails;
-      error.validationErrors = validationErrors;
-      throw error;
-    }
-
-    // Verificar content-type
-    const contentType = response.headers.get('content-type');
-    logger.debug(context, 'Content-Type verificado', { contentType });
-
-    // Leer stream
-    logger.info(context, 'Iniciando lectura del stream');
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let fullResponse = '';
-    let conversationData = null;
-    let messageId = null;
-    let chunkCount = 0;
-    let textChunkCount = 0;
-    const startTime = Date.now();
-    let doneSignalReceived = false;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      
-      if (done) {
-        const duration = Date.now() - startTime;
-        logger.success(context, 'Stream completado', {
-          totalChunks: chunkCount,
-          textChunks: textChunkCount,
-          responseLength: fullResponse.length,
-          duration: `${duration}ms`,
-          hasConversation: !!conversationData,
-          hasMessageId: !!messageId,
-          doneSignalReceived
-        });
-        break;
-      }
-
-      // Decodificar chunk
-      const decodedChunk = decoder.decode(value, { stream: true });
-      buffer += decodedChunk;
-      chunkCount++;
-      
-      logger.debug(context, `Chunk ${chunkCount} recibido`, {
-        size: decodedChunk.length,
-        preview: decodedChunk.substring(0, 100)
+    try {
+      const token = localStorage.getItem(getStorageKey('token'));
+      logger.debug(context, 'Token verificado', { 
+        present: !!token,
+        key: getStorageKey('token')
       });
       
-      // Procesar líneas completas
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+      if (!token) {
+        const error = new Error('No hay token de autenticacion');
+        logger.error(context, error.message);
+        throw error;
+      }
 
-      for (const line of lines) {
-        if (!line.trim()) continue;
+      const baseURL = api.defaults.baseURL || 'http://localhost:5000';
+      logger.debug(context, 'URL base configurada', { baseURL });
+      
+      const payload = { prompt };
+      
+      if (conversationId && 
+          conversationId !== 'null' && 
+          conversationId !== 'undefined' &&
+          typeof conversationId === 'string' &&
+          conversationId.trim().length > 0) {
+        payload.conversationId = conversationId;
+        logger.debug(context, 'ConversationId agregado', { conversationId });
+      } else {
+        logger.debug(context, 'Sin conversationId (nueva conversacion)');
+      }
 
-        logger.debug(context, 'Procesando línea', { 
-          line: line.substring(0, 100) 
-        });
+      payload.config = {
+        temperature: config.temperature || 0.7,
+        ...config
+      };
 
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6).trim();
+      logger.debug(context, 'Payload preparado', payload);
+
+      const url = `${baseURL}/api/gemini/text/stream`;
+      logger.info(context, 'Iniciando fetch', { url });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      logger.debug(context, 'Response recibida', { 
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type')
+      });
+
+      if (!response.ok) {
+        logger.error(context, 'Response not OK', { status: response.status });
+        
+        let errorMessage = 'Error en streaming';
+        let errorDetails = null;
+        let validationErrors = null;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          errorDetails = errorData.details || errorData.error;
+          validationErrors = errorData.errors;
           
-          // Señal de finalización
-          if (data === '[DONE]') {
-            logger.info(context, 'Señal [DONE] recibida');
-            doneSignalReceived = true;
-            
-            if (onComplete) {
-              logger.info(context, 'Llamando onComplete desde [DONE]');
-              onComplete({
-                fullResponse,
-                conversationId: conversationData?.id || conversationData?._id,
-                messageId,
-                conversation: conversationData
-              });
-            }
-            continue;
-          }
+          logger.error(context, 'Error del servidor', {
+            status: response.status,
+            message: errorMessage,
+            details: errorDetails,
+            validationErrors
+          });
+        } catch (e) {
+          logger.error(context, 'No se pudo parsear error JSON');
+        }
+        
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        error.details = errorDetails;
+        error.validationErrors = validationErrors;
+        throw error;
+      }
 
-          // Parsear JSON
-          try {
-            const parsed = JSON.parse(data);
+      const contentType = response.headers.get('content-type');
+      logger.debug(context, 'Content-Type verificado', { contentType });
+
+      logger.info(context, 'Iniciando lectura del stream');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullResponse = '';
+      let conversationData = null;
+      let messageId = null;
+      let chunkCount = 0;
+      let textChunkCount = 0;
+      const startTime = Date.now();
+
+      // CRITICO: Variable para controlar si ya llamamos onComplete
+      let completeCalled = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          const duration = Date.now() - startTime;
+          logger.success(context, 'Stream completado (done=true)', {
+            totalChunks: chunkCount,
+            textChunks: textChunkCount,
+            responseLength: fullResponse.length,
+            duration: `${duration}ms`,
+            hasConversation: !!conversationData,
+            hasMessageId: !!messageId
+          });
+          break;
+        }
+
+        const decodedChunk = decoder.decode(value, { stream: true });
+        buffer += decodedChunk;
+        chunkCount++;
+        
+        logger.debug(context, `Chunk ${chunkCount} recibido`, {
+          size: decodedChunk.length,
+          preview: decodedChunk.substring(0, 100)
+        });
+        
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          logger.debug(context, 'Procesando linea', { 
+            line: line.substring(0, 100) 
+          });
+
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
             
-            logger.debug(context, 'Datos parseados', {
-              type: parsed.type,
-              hasText: !!parsed.text,
-              hasChunk: !!parsed.chunk,
-              hasConversation: !!parsed.conversation,
-              hasMessageId: !!parsed.messageId,
-              hasError: !!parsed.error
-            });
-            
-            // MANEJAR DIFERENTES TIPOS DE EVENTOS
-            if (parsed.type === 'start') {
-              if (parsed.conversationId) {
-                logger.info(context, 'Evento START recibido', {
-                  conversationId: parsed.conversationId,
-                  metadata: parsed.metadata
+            // CRITICO: Cuando llega [DONE], NO llamar onComplete aqui
+            // Solo marcamos que llegó la señal
+            if (data === '[DONE]') {
+              logger.info(context, 'Senal [DONE] recibida - se llamara onComplete al salir del loop');
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              
+              logger.debug(context, 'Datos parseados', {
+                type: parsed.type,
+                hasText: !!parsed.text,
+                hasChunk: !!parsed.chunk,
+                hasConversation: !!parsed.conversation,
+                hasMessageId: !!parsed.messageId,
+                hasError: !!parsed.error
+              });
+              
+              if (parsed.type === 'start') {
+                if (parsed.conversationId) {
+                  logger.info(context, 'Evento START recibido', {
+                    conversationId: parsed.conversationId,
+                    metadata: parsed.metadata
+                  });
+                }
+                continue;
+              }
+              
+              if (parsed.type === 'chunk' && parsed.text) {
+                textChunkCount++;
+                fullResponse += parsed.text;
+                
+                logger.debug(context, `Chunk de texto ${textChunkCount}`, {
+                  text: parsed.text.substring(0, 50),
+                  accumulated: fullResponse.length
+                });
+                
+                if (onChunk) {
+                  onChunk(parsed.text, fullResponse);
+                }
+                continue;
+              }
+              
+              if (parsed.type === 'end') {
+                if (parsed.messageId) {
+                  messageId = parsed.messageId;
+                  logger.info(context, 'Evento END recibido', {
+                    messageId,
+                    conversationId: parsed.conversationId
+                  });
+                }
+                
+                if (parsed.conversationId && !conversationData) {
+                  conversationData = {
+                    id: parsed.conversationId,
+                    _id: parsed.conversationId
+                  };
+                }
+                
+                if (parsed.conversation) {
+                  conversationData = parsed.conversation;
+                }
+                continue;
+              }
+              
+              if (parsed.chunk) {
+                textChunkCount++;
+                fullResponse += parsed.chunk;
+                
+                logger.debug(context, `Chunk de texto ${textChunkCount} (formato alt)`, {
+                  chunk: parsed.chunk.substring(0, 50),
+                  accumulated: fullResponse.length
+                });
+                
+                if (onChunk) {
+                  onChunk(parsed.chunk, fullResponse);
+                }
+              }
+              
+              if (parsed.conversation) {
+                conversationData = parsed.conversation;
+                logger.info(context, 'Conversacion recibida', { 
+                  id: conversationData?.id || conversationData?._id,
+                  title: conversationData?.title
                 });
               }
-              continue;
-            }
-            
-            if (parsed.type === 'chunk' && parsed.text) {
-              textChunkCount++;
-              fullResponse += parsed.text;
               
-              logger.debug(context, `Chunk de texto ${textChunkCount}`, {
-                text: parsed.text.substring(0, 50),
-                accumulated: fullResponse.length
-              });
-              
-              if (onChunk) {
-                onChunk(parsed.text, fullResponse);
-              }
-              continue;
-            }
-            
-            if (parsed.type === 'end') {
-              if (parsed.messageId) {
+              if (parsed.messageId && !messageId) {
                 messageId = parsed.messageId;
-                logger.info(context, 'Evento END recibido', {
-                  messageId,
-                  conversationId: parsed.conversationId
-                });
+                logger.info(context, 'MessageId recibido', { messageId });
               }
-              
-              if (parsed.conversationId && !conversationData) {
-                conversationData = {
-                  id: parsed.conversationId,
-                  _id: parsed.conversationId
-                };
-              }
-              continue;
-            }
-            
-            // Formato alternativo: {chunk: '...'}
-            if (parsed.chunk) {
-              textChunkCount++;
-              fullResponse += parsed.chunk;
-              
-              logger.debug(context, `Chunk de texto ${textChunkCount} (formato alt)`, {
-                chunk: parsed.chunk.substring(0, 50),
-                accumulated: fullResponse.length
-              });
-              
-              if (onChunk) {
-                onChunk(parsed.chunk, fullResponse);
-              }
-            }
-            
-            // Datos de conversación
-            if (parsed.conversation) {
-              conversationData = parsed.conversation;
-              logger.info(context, 'Conversación recibida', { 
-                id: conversationData?.id || conversationData?._id,
-                title: conversationData?.title
-              });
-            }
-            
-            // ID del mensaje (formato alternativo)
-            if (parsed.messageId && !messageId) {
-              messageId = parsed.messageId;
-              logger.info(context, 'MessageId recibido', { messageId });
-            }
 
-            // Error en stream
-            if (parsed.error) {
-              logger.error(context, 'Error en stream', { error: parsed.error });
-              throw new Error(parsed.error);
+              if (parsed.error) {
+                logger.error(context, 'Error en stream', { error: parsed.error });
+                throw new Error(parsed.error);
+              }
+              
+            } catch (parseError) {
+              logger.error(context, 'Error parseando JSON', {
+                error: parseError.message,
+                data: data.substring(0, 200)
+              });
             }
-            
-          } catch (parseError) {
-            logger.error(context, 'Error parseando JSON', {
-              error: parseError.message,
-              data: data.substring(0, 200)
-            });
+          } else {
+            logger.warning(context, 'Linea sin formato data:', { line });
           }
-        } else {
-          logger.warning(context, 'Línea sin formato data:', { line });
         }
       }
-    }
 
-    // CRÍTICO: Si no se recibió señal [DONE], llamar onComplete aquí
-    if (!doneSignalReceived && onComplete && fullResponse.length > 0) {
-      logger.info(context, '⚠️ No se recibió [DONE], llamando onComplete manualmente');
-      onComplete({
-        fullResponse,
-        conversationId: conversationData?.id || conversationData?._id,
-        messageId,
-        conversation: conversationData
-      });
-    }
-
-    // Validación final
-    if (fullResponse.length === 0) {
-      logger.error(context, 'Streaming finalizado sin respuesta');
-      throw new Error('No se recibió contenido del modelo de IA');
-    }
-
-    logger.success(context, 'Streaming completado exitosamente', {
-      responseLength: fullResponse.length,
-      preview: fullResponse.substring(0, 100)
-    });
-
-    return {
-      success: true,
-      data: {
-        response: fullResponse,
-        conversation: conversationData,
-        messageId
+      // CRITICO: Llamar onComplete UNA SOLA VEZ al terminar el loop
+      if (onComplete && !completeCalled) {
+        completeCalled = true;
+        logger.info(context, 'Llamando onComplete (stream finalizado)');
+        onComplete({
+          fullResponse,
+          conversationId: conversationData?.id || conversationData?._id,
+          messageId,
+          conversation: conversationData
+        });
       }
-    };
 
-  } catch (error) {
-    const errorInfo = handleError(error, context, { 
-      showToast: false,
-      logToConsole: true
-    });
-    
-    logger.error(context, 'Error en sendTextStream', {
-      message: error.message,
-      status: error.status,
-      details: error.details,
-      validationErrors: error.validationErrors
-    });
-    
-    if (onError) {
-      onError(error);
+      if (fullResponse.length === 0) {
+        logger.error(context, 'Streaming finalizado sin respuesta');
+        throw new Error('No se recibio contenido del modelo de IA');
+      }
+
+      logger.success(context, 'Streaming completado exitosamente', {
+        responseLength: fullResponse.length,
+        preview: fullResponse.substring(0, 100)
+      });
+
+      return {
+        success: true,
+        data: {
+          response: fullResponse,
+          conversation: conversationData,
+          messageId
+        }
+      };
+
+    } catch (error) {
+      const errorInfo = handleError(error, context, { 
+        showToast: false,
+        logToConsole: true
+      });
+      
+      logger.error(context, 'Error en sendTextStream', {
+        message: error.message,
+        status: error.status,
+        details: error.details,
+        validationErrors: error.validationErrors
+      });
+      
+      if (onError) {
+        onError(error);
+      }
+      
+      throw error;
     }
-    
-    throw error;
-  }
-},
-
+  },
 
   /**
    * Enviar mensaje multimodal (sin streaming)
@@ -402,17 +378,15 @@ sendTextStream: async (
     try {
       logger.info(context, 'Enviando mensaje multimodal');
       
-      // Validar conversationId
       const conversationId = formData.get('conversationId');
       if (!conversationId || 
           conversationId === 'null' || 
           conversationId === 'undefined' ||
           conversationId.trim().length === 0) {
         formData.delete('conversationId');
-        logger.debug(context, 'ConversationId removido (no válido)');
+        logger.debug(context, 'ConversationId removido (no valido)');
       }
 
-      // Agregar configuración
       if (config && Object.keys(config).length > 0) {
         formData.append('config', JSON.stringify({
           temperature: config.temperature || 0.7,
@@ -453,16 +427,14 @@ sendTextStream: async (
     logger.info(context, 'Iniciando multimodal streaming');
     
     try {
-      // Obtener token
       const token = localStorage.getItem(getStorageKey('token'));
       
       if (!token) {
-        const error = new Error('No hay token de autenticación');
+        const error = new Error('No hay token de autenticacion');
         logger.error(context, error.message);
         throw error;
       }
 
-      // Validar conversationId
       const conversationId = formData.get('conversationId');
       if (!conversationId || 
           conversationId === 'null' ||
@@ -472,7 +444,6 @@ sendTextStream: async (
         logger.debug(context, 'ConversationId removido');
       }
 
-      // Configuración
       if (config && Object.keys(config).length > 0) {
         formData.append('config', JSON.stringify({
           temperature: config.temperature || 0.7,
@@ -528,6 +499,7 @@ sendTextStream: async (
       let conversationData = null;
       let messageId = null;
       let textChunkCount = 0;
+      let completeCalled = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -551,23 +523,13 @@ sendTextStream: async (
             const data = line.slice(6).trim();
             
             if (data === '[DONE]') {
-              logger.info(context, 'Señal [DONE] recibida');
-              
-              if (onComplete) {
-                onComplete({
-                  fullResponse,
-                  conversationId: conversationData?.id || conversationData?._id,
-                  messageId,
-                  conversation: conversationData
-                });
-              }
+              logger.info(context, 'Senal [DONE] recibida');
               continue;
             }
 
             try {
               const parsed = JSON.parse(data);
               
-              // Evento START
               if (parsed.type === 'start' && parsed.conversationId) {
                 logger.info(context, 'Evento START', {
                   conversationId: parsed.conversationId
@@ -575,7 +537,6 @@ sendTextStream: async (
                 continue;
               }
               
-              // Evento CHUNK con texto
               if (parsed.type === 'chunk' && parsed.text) {
                 textChunkCount++;
                 fullResponse += parsed.text;
@@ -588,7 +549,6 @@ sendTextStream: async (
                 continue;
               }
               
-              // Evento END
               if (parsed.type === 'end') {
                 if (parsed.messageId) {
                   messageId = parsed.messageId;
@@ -600,10 +560,12 @@ sendTextStream: async (
                     _id: parsed.conversationId
                   };
                 }
+                if (parsed.conversation) {
+                  conversationData = parsed.conversation;
+                }
                 continue;
               }
               
-              // Formato alternativo
               if (parsed.chunk) {
                 textChunkCount++;
                 fullResponse += parsed.chunk;
@@ -614,7 +576,7 @@ sendTextStream: async (
               
               if (parsed.conversation) {
                 conversationData = parsed.conversation;
-                logger.info(context, 'Conversación recibida');
+                logger.info(context, 'Conversacion recibida');
               }
               
               if (parsed.messageId && !messageId) {
@@ -633,10 +595,21 @@ sendTextStream: async (
         }
       }
 
-      // Validación final
+      // CRITICO: Llamar onComplete al salir del loop
+      if (onComplete && !completeCalled) {
+        completeCalled = true;
+        logger.info(context, 'Llamando onComplete (stream finalizado)');
+        onComplete({
+          fullResponse,
+          conversationId: conversationData?.id || conversationData?._id,
+          messageId,
+          conversation: conversationData
+        });
+      }
+
       if (fullResponse.length === 0) {
         logger.error(context, 'Stream sin contenido');
-        throw new Error('No se recibió contenido del servidor');
+        throw new Error('No se recibio contenido del servidor');
       }
 
       logger.success(context, 'Multimodal streaming completado');
