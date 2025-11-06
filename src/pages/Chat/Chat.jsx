@@ -15,7 +15,7 @@ import {
   ChatHeader,
   MessageList,
   ChatInput
-} from '@components/Chat';
+} from '@components/chat';
 
 const WELCOME_MESSAGE = {
   id: 'welcome',
