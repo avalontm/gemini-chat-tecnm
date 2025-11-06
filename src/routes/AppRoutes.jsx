@@ -15,7 +15,7 @@ import Chat from '@pages/Chat';
 import Profile from '@pages/Profile';
 import Terms from '@pages/Terms';
 import Privacy from '@pages/Privacy';
-import NotFound from '@pages/NotFound';
+import NotFound from '@pages/NotFound/index';
 
 // Importar componente de proteccion
 import PrivateRoute from '@components/auth/PrivateRoute';
