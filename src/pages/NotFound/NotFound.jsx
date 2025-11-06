@@ -1,3 +1,5 @@
+// src/pages/NotFound/NotFound.jsx
+
 import { Link } from 'react-router-dom';
 import { Home, Search, ArrowLeft } from 'lucide-react';
 
