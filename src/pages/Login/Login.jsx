@@ -1,8 +1,11 @@
+// src/pages/Login/Login.jsx
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock, ArrowLeft, GraduationCap } from 'lucide-react';
+import { LogIn, Mail, Lock, ArrowLeft, GraduationCap, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@context/AuthContext';
+import { authAPI } from '@api/endpoints/auth.api';
 import { SITE_CONFIG } from '@config/constants';
 
 function Login() {
@@ -15,6 +18,9 @@ function Login() {
     rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -24,9 +30,44 @@ function Login() {
     }));
   };
 
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    
+    try {
+      console.log('[LOGIN] Reenviando correo de verificación a:', unverifiedEmail);
+      
+      await authAPI.resendVerificationEmail(unverifiedEmail);
+      
+      toast.success('Correo de verificación enviado. Revisa tu bandeja de entrada.', {
+        duration: 5000,
+        icon: '📧',
+      });
+      
+      setShowResendVerification(false);
+      
+    } catch (error) {
+      console.error('[LOGIN] Error reenviando verificación:', error);
+      
+      const errorMessage = error.response?.data?.message || 'Error al reenviar correo de verificación';
+      toast.error(errorMessage);
+      
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Prevenir múltiples envíos
+    if (isLoading || authLoading) {
+      console.log('[LOGIN] Ya hay un login en proceso, ignorando...');
+      return;
+    }
+    
+    // Ocultar alerta de verificación si estaba visible
+    setShowResendVerification(false);
     
     // Validaciones básicas
     if (!formData.email || !formData.password) {
@@ -82,18 +123,48 @@ function Login() {
         navigate(SITE_CONFIG.routes.chat, { replace: true });
         
       } else {
+        // ===== AQUÍ ESTÁ EL FIX =====
+        // Manejar errores específicos cuando result.success es false
         console.error('[LOGIN] Login falló');
         console.error('Error:', result?.error);
+        console.error('Code:', result?.code);
         
-        // Si el resultado no tiene success, mostrar error genérico
-        if (!result || !result.error) {
-          toast.error('Error al iniciar sesión. Intenta de nuevo.');
+        // Verificar si es error de cuenta no verificada
+        if (result?.code === 'ACCOUNT_NOT_VERIFIED') {
+          const email = result?.data?.email || formData.email;
+          setShowResendVerification(true);
+          setUnverifiedEmail(email);
+          // Toast ya se muestra en AuthContext, no duplicar aquí
+        } else if (result?.code === 'ACCOUNT_DISABLED') {
+          // Toast ya se muestra en AuthContext
+        } else if (result?.error) {
+          // Toast ya se muestra en AuthContext para errores generales
         }
       }
     } catch (error) {
       console.error('[LOGIN] Error inesperado:', error);
       console.error('Stack:', error.stack);
-      toast.error('Error inesperado. Por favor, intenta de nuevo.');
+      console.error('Response:', error.response?.data);
+      
+      // Verificar si el error tiene código de cuenta no verificada
+      const errorData = error.response?.data;
+      
+      if (errorData?.code === 'ACCOUNT_NOT_VERIFIED') {
+        const email = errorData?.data?.email || formData.email;
+        setShowResendVerification(true);
+        setUnverifiedEmail(email);
+        toast.error('Tu cuenta no está verificada. Revisa tu correo.', {
+          duration: 5000,
+        });
+      } else if (errorData?.code === 'ACCOUNT_DISABLED') {
+        toast.error('Tu cuenta ha sido desactivada. Contacta a servicios escolares.', {
+          duration: 6000,
+        });
+      } else if (errorData?.message) {
+        toast.error(errorData.message);
+      } else {
+        toast.error('Error inesperado. Por favor, intenta de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -134,6 +205,41 @@ function Login() {
               <span>Correo institucional</span>
             </div>
           </div>
+
+          {/* Alerta de cuenta no verificada */}
+          {showResendVerification && (
+            <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                    Cuenta no verificada
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+                    Debes verificar tu correo electrónico antes de iniciar sesión. 
+                    Revisa tu bandeja de entrada y carpeta de spam.
+                  </p>
+                  <button
+                    onClick={handleResendVerification}
+                    disabled={isResending}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        <span>Reenviar correo de verificación</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>

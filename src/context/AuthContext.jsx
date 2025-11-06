@@ -62,64 +62,78 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login
-  const login = async (email, password, rememberMe = false) => {
-    try {
-      setLoading(true);
+// ACTUALIZACIÓN DEL MÉTODO login EN AuthContext.jsx
 
-      const response = await api.post(
-        API_CONFIG.endpoints.auth.login,
-        { email, password }
-      );
+// Login
+const login = async (email, password, rememberMe = false) => {
+  try {
+    setLoading(true);
 
-      console.log('[AUTH] Response completa:', response.data);
+    const response = await api.post(
+      API_CONFIG.endpoints.auth.login,
+      { email, password }
+    );
 
-      // El backend devuelve: { success, message, data: { token, user } }
-      // Extraer token y user del objeto data
-      const responseData = response.data.data || response.data;
-      const { token: newToken, user: newUser } = responseData;
+    console.log('[AUTH] Response completa:', response.data);
 
-      console.log('[AUTH] Token extraido:', newToken?.substring(0, 20) + '...');
-      console.log('[AUTH] User extraido:', newUser);
+    // El backend devuelve: { success, message, data: { token, user } }
+    // Extraer token y user del objeto data
+    const responseData = response.data.data || response.data;
+    const { token: newToken, user: newUser } = responseData;
 
-      if (!newToken || !newUser) {
-        throw new Error('Token o usuario no encontrado en la respuesta');
-      }
+    console.log('[AUTH] Token extraido:', newToken?.substring(0, 20) + '...');
+    console.log('[AUTH] User extraido:', newUser);
 
-      // IMPORTANTE: Guardar en localStorage PRIMERO
-      localStorage.setItem(getStorageKey('token'), newToken);
-      localStorage.setItem(getStorageKey('user'), JSON.stringify(newUser));
-      
-      if (rememberMe) {
-        localStorage.setItem(getStorageKey('rememberMe'), 'true');
-      }
-
-      console.log('[AUTH] Token guardado en localStorage');
-      console.log('[AUTH] Verificando token guardado:', localStorage.getItem(getStorageKey('token'))?.substring(0, 20) + '...');
-
-      // Luego actualizar estado
-      setToken(newToken);
-      setUser(newUser);
-      setIsAuthenticated(true);
-
-      toast.success('Inicio de sesion exitoso');
-
-      return { success: true, user: newUser, token: newToken };
-    } catch (error) {
-      console.error('[AUTH] Error en login:', error);
-      
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
-        'Error al iniciar sesion';
-      
-      toast.error(errorMessage);
-
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
+    if (!newToken || !newUser) {
+      throw new Error('Token o usuario no encontrado en la respuesta');
     }
-  };
+
+    // IMPORTANTE: Guardar en localStorage PRIMERO
+    localStorage.setItem(getStorageKey('token'), newToken);
+    localStorage.setItem(getStorageKey('user'), JSON.stringify(newUser));
+    
+    if (rememberMe) {
+      localStorage.setItem(getStorageKey('rememberMe'), 'true');
+    }
+
+    console.log('[AUTH] Token guardado en localStorage');
+    console.log('[AUTH] Verificando token guardado:', localStorage.getItem(getStorageKey('token'))?.substring(0, 20) + '...');
+
+    // Luego actualizar estado
+    setToken(newToken);
+    setUser(newUser);
+    setIsAuthenticated(true);
+
+    toast.success('Inicio de sesion exitoso');
+
+    return { success: true, user: newUser, token: newToken };
+  } catch (error) {
+    console.error('[AUTH] Error en login:', error);
+    
+    // Extraer información del error
+    const errorData = error.response?.data;
+    const errorMessage = errorData?.message || error.message || 'Error al iniciar sesion';
+    const errorCode = errorData?.code;
+    const additionalData = errorData?.data;
+    
+    // Mostrar toast solo si NO es error de cuenta no verificada
+    // (para evitar toast duplicado con el de Login.jsx)
+    if (errorCode !== 'ACCOUNT_NOT_VERIFIED') {
+      toast.error(errorMessage);
+    }
+
+    // Retornar objeto con toda la información
+    return { 
+      success: false, 
+      error: errorMessage,
+      code: errorCode,
+      data: additionalData
+    };
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Register
   const register = async (username, email, password) => {
