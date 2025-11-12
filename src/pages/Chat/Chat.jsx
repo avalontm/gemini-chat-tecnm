@@ -6,9 +6,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@context/AuthContext';
+import { useTheme } from '@context/ThemeContext';
 import { SITE_CONFIG } from '@config/constants';
 import { geminiAPI } from '@api/endpoints/gemini.api';
 import { conversationAPI } from '@api/endpoints/conversation.api';
+import { userAPI } from '@api/endpoints/user.api';
 
 import {
   ChatSidebar,
@@ -27,17 +29,22 @@ const WELCOME_MESSAGE = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 5;
 const SAFETY_TIMEOUT = 5 * 60 * 1000;
-const STREAM_DELAY = 60; // FPS para renderizado suave
+const STREAM_DELAY = 60;
 
 function Chat() {
   const navigate = useNavigate();
   const { conversationId } = useParams();
   const { user, token, isAuthenticated, logout } = useAuth();
+  const { setTheme } = useTheme();
 
-  const abortControllerRef = useRef(null);
-  const isCreatingConversationRef = useRef(false);
   const streamBufferRef = useRef('');
   const lastRenderTimeRef = useRef(0);
+  const sendingLockRef = useRef(false);
+  const initFlagsRef = useRef({
+    isInitialized: false,
+    themeLoaded: false,
+    conversationsLoaded: false
+  });
 
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,19 +57,44 @@ function Chat() {
   const [temperature, setTemperature] = useState(0.7);
 
   useEffect(() => {
+    const handleResize = () => {
+      setIsSidebarOpen(window.innerWidth >= 1024);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     if (!isAuthenticated && !token) {
       toast.error('Debes iniciar sesión');
       navigate(SITE_CONFIG.routes.login);
     }
   }, [isAuthenticated, token, navigate]);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadConversations();
+  const loadUserTheme = useCallback(async () => {
+    if (initFlagsRef.current.themeLoaded) return;
+
+    try {
+      const response = await userAPI.getProfile();
+      
+      if (response.success && response.data?.user?.preferences?.theme) {
+        setTheme(response.data.user.preferences.theme);
+      }
+      
+      initFlagsRef.current.themeLoaded = true;
+    } catch (error) {
+      if (error.response?.status !== 429) {
+        console.error('Error cargando tema:', error);
+      }
     }
-  }, [isAuthenticated]);
+  }, [setTheme]);
 
   const loadConversations = useCallback(async () => {
+    if (initFlagsRef.current.conversationsLoaded) return;
+    
     try {
       setIsLoadingConversations(true);
       const response = await conversationAPI.getConversations(1, 50);
@@ -80,11 +112,12 @@ function Chat() {
       }
       
       setConversations(conversationsList);
+      initFlagsRef.current.conversationsLoaded = true;
     } catch (error) {
       if (error.response?.status === 401) {
         toast.error('Sesión expirada');
         navigate(SITE_CONFIG.routes.login);
-      } else {
+      } else if (error.response?.status !== 429) {
         toast.error('Error al cargar conversaciones');
       }
     } finally {
@@ -92,32 +125,64 @@ function Chat() {
     }
   }, [navigate]);
 
-  useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsStreaming(false);
+  const reloadConversations = useCallback(async () => {
+    try {
+      const response = await conversationAPI.getConversations(1, 50);
+      
+      let conversationsList = [];
+      
+      if (response.data) {
+        if (response.data.data?.conversations && Array.isArray(response.data.data.conversations)) {
+          conversationsList = response.data.data.conversations;
+        } else if (response.data.conversations && Array.isArray(response.data.conversations)) {
+          conversationsList = response.data.conversations;
+        } else if (Array.isArray(response.data)) {
+          conversationsList = response.data;
+        }
+      }
+      
+      setConversations(conversationsList);
+    } catch (error) {
+      if (error.response?.status !== 429 && error.response?.status !== 401) {
+        console.error('Error recargando conversaciones:', error);
+      }
     }
+  }, []);
 
+  useEffect(() => {
+    if (isAuthenticated && !initFlagsRef.current.isInitialized) {
+      initFlagsRef.current.isInitialized = true;
+      
+      const initialize = async () => {
+        await loadUserTheme();
+        await loadConversations();
+      };
+      
+      initialize();
+    }
+    
+    return () => {
+      if (!isAuthenticated) {
+        initFlagsRef.current = {
+          isInitialized: false,
+          themeLoaded: false,
+          conversationsLoaded: false
+        };
+      }
+    };
+  }, [isAuthenticated, loadUserTheme, loadConversations]);
+
+  useEffect(() => {
     if (conversationId && conversationId !== 'undefined' && conversationId !== 'null') {
       loadConversation(conversationId);
     } else {
       setMessages([WELCOME_MESSAGE]);
       setCurrentConversation(null);
     }
-
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    };
   }, [conversationId]);
 
   const loadConversation = useCallback(async (convId) => {
-    if (!convId || convId === 'undefined' || convId === 'null') {
-      return;
-    }
+    if (!convId || convId === 'undefined' || convId === 'null') return;
 
     try {
       setIsLoading(true);
@@ -142,7 +207,7 @@ function Chat() {
       }
 
       if (!conversation) {
-        throw new Error('No se pudo extraer la conversación de la respuesta');
+        throw new Error('No se pudo extraer la conversación');
       }
 
       setCurrentConversation(conversation);
@@ -166,7 +231,7 @@ function Chat() {
         toast.error('Sesión expirada');
         navigate(SITE_CONFIG.routes.login);
       } else if (error.response?.status === 500) {
-        toast.error('Error del servidor al cargar la conversación');
+        toast.error('Error del servidor');
         navigate('/chat');
       } else {
         toast.error('Error al cargar la conversación');
@@ -177,16 +242,12 @@ function Chat() {
   }, [navigate]);
 
   const handleNewConversation = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-    }
-
     setMessages([WELCOME_MESSAGE]);
     setCurrentConversation(null);
     setSelectedFiles([]);
     setIsLoading(false);
+    setIsStreaming(false);
+    sendingLockRef.current = false;
     navigate('/chat');
     toast.success('Nueva conversación iniciada');
   }, [navigate]);
@@ -215,48 +276,6 @@ function Chat() {
     }
   }, [currentConversation, handleNewConversation]);
 
-  const createNewConversation = useCallback(async (firstMessage) => {
-    if (isCreatingConversationRef.current) {
-      return null;
-    }
-
-    try {
-      isCreatingConversationRef.current = true;
-      
-      const title = firstMessage.length > 50 
-        ? firstMessage.substring(0, 50) + '...'
-        : firstMessage;
-      
-      const response = await conversationAPI.createConversation(title, firstMessage);
-      
-      let newConversation = null;
-      
-      if (response.data) {
-        if (response.data.conversation) {
-          newConversation = response.data.conversation;
-        } else if (response.data.data?.conversation) {
-          newConversation = response.data.data.conversation;
-        } else if (response.data.id || response.data._id) {
-          newConversation = response.data;
-        }
-      }
-      
-      if (!newConversation) {
-        throw new Error('Formato de respuesta inválido al crear conversación');
-      }
-      
-      setCurrentConversation(newConversation);
-      setConversations(prev => [newConversation, ...prev]);
-      
-      return newConversation;
-      
-    } catch (error) {
-      throw error;
-    } finally {
-      isCreatingConversationRef.current = false;
-    }
-  }, []);
-
   const handleFileSelect = useCallback((e, type = 'file') => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -280,7 +299,7 @@ function Chat() {
       } else {
         const isValidType = file.type === 'application/pdf' || file.type.startsWith('image/');
         if (!isValidType) {
-          toast.error(`${file.name} no es un tipo de archivo válido`);
+          toast.error(`${file.name} no es un tipo válido`);
           return false;
         }
       }
@@ -300,19 +319,16 @@ function Chat() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Función para procesar chunks con delay controlado
   const processChunkWithDelay = useCallback(async (chunk, accumulated, callback) => {
     const now = Date.now();
     const timeSinceLastRender = now - lastRenderTimeRef.current;
     
-    // Si ha pasado suficiente tiempo desde el último render, procesar inmediatamente
     if (timeSinceLastRender >= STREAM_DELAY) {
       lastRenderTimeRef.current = now;
       callback(chunk, accumulated);
       return;
     }
     
-    // Si no, esperar el tiempo restante para completar el delay
     const waitTime = STREAM_DELAY - timeSinceLastRender;
     await new Promise(resolve => setTimeout(resolve, waitTime));
     lastRenderTimeRef.current = Date.now();
@@ -320,15 +336,26 @@ function Chat() {
   }, []);
 
   const handleSendMessage = useCallback(async (messageContent) => {
-    if ((!messageContent || !messageContent.trim()) && selectedFiles.length === 0) {
-      toast.error('Por favor, escribe un mensaje o adjunta un archivo');
+    console.log('[CHAT] handleSendMessage llamado, lock:', sendingLockRef.current);
+    
+    if (sendingLockRef.current) {
+      console.warn('[CHAT] Envío bloqueado - sendingLockRef es true');
       return;
     }
 
-    if (isStreaming) {
+    if ((!messageContent || !messageContent.trim()) && selectedFiles.length === 0) {
+      toast.error('Escribe un mensaje o adjunta un archivo');
+      return;
+    }
+
+    if (isStreaming || isLoading) {
+      console.warn('[CHAT] Bloqueado por isStreaming o isLoading');
       toast.error('Espera a que termine la respuesta actual');
       return;
     }
+
+    sendingLockRef.current = true;
+    console.log('[CHAT] Lock activado - Iniciando envío');
 
     const trimmedContent = messageContent?.trim() || '';
     const userMessageId = `user-${Date.now()}`;
@@ -344,18 +371,18 @@ function Chat() {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    setIsStreaming(false);
 
     const filesForRequest = [...selectedFiles];
     setSelectedFiles([]);
 
-    // Resetear referencias del stream
     streamBufferRef.current = '';
     lastRenderTimeRef.current = 0;
 
     const safetyTimeoutId = setTimeout(() => {
+      console.warn('[CHAT] Safety timeout alcanzado');
       setIsStreaming(false);
       setIsLoading(false);
+      sendingLockRef.current = false;
       
       setMessages(prev => 
         prev.map(msg => 
@@ -394,17 +421,12 @@ function Chat() {
             }]);
           });
         } else {
-          // Usar el delay controlado para actualizar el mensaje
           await processChunkWithDelay(chunk, accumulated, (chunk, accumulated) => {
             flushSync(() => {
               setMessages(prev => 
                 prev.map(msg => 
                   msg.id === aiMessageId 
-                    ? { 
-                        ...msg, 
-                        content: accumulated, 
-                        isStreaming: true
-                      }
+                    ? { ...msg, content: accumulated, isStreaming: true }
                     : msg
                 )
               );
@@ -417,14 +439,15 @@ function Chat() {
         if (completeCalled) return;
         completeCalled = true;
         
+        console.log('[CHAT] Mensaje completado');
         clearTimeout(safetyTimeoutId);
         
         const { conversation, messageId } = data;
         
         setIsStreaming(false);
         setIsLoading(false);
+        sendingLockRef.current = false;
         
-        // Asegurar que el último contenido se muestre correctamente
         setTimeout(() => {
           setMessages(prev => 
             prev.map(msg => 
@@ -461,21 +484,23 @@ function Chat() {
           }
         }
 
-        loadConversations();
+        reloadConversations();
       };
 
       const handleError = (error) => {
+        console.error('[CHAT] Error en mensaje:', error);
         clearTimeout(safetyTimeoutId);
         
         setIsStreaming(false);
         setIsLoading(false);
+        sendingLockRef.current = false;
         
         setMessages(prev => 
           prev.map(msg => 
             msg.id === aiMessageId 
               ? { 
                   ...msg, 
-                  content: streamBufferRef.current || 'Error al generar respuesta. Por favor, intenta de nuevo.',
+                  content: streamBufferRef.current || 'Error al generar respuesta.',
                   isStreaming: false,
                   error: true
                 }
@@ -485,8 +510,8 @@ function Chat() {
         
         let errorMessage = 'Error al enviar el mensaje';
         
-        if (error.message.includes('Token') || error.message.includes('autenticación')) {
-          errorMessage = 'Sesión expirada. Por favor inicia sesión nuevamente.';
+        if (error.message?.includes('Token') || error.message?.includes('autenticación')) {
+          errorMessage = 'Sesión expirada';
           setTimeout(() => navigate(SITE_CONFIG.routes.login), 2000);
         } else if (error.message) {
           errorMessage = error.message;
@@ -507,6 +532,7 @@ function Chat() {
           formData.append('files', file);
         });
 
+        console.log('[CHAT] Enviando mensaje multimodal');
         await geminiAPI.sendMultimodalStream(
           formData,
           handleChunk,
@@ -515,18 +541,8 @@ function Chat() {
           config
         );
         
-        setTimeout(() => {
-          if (!completeCalled && placeholderAdded) {
-            handleComplete({
-              fullResponse: streamBufferRef.current,
-              conversationId: convId,
-              messageId: null,
-              conversation: currentConversation
-            });
-          }
-        }, 2000);
-        
       } else {
+        console.log('[CHAT] Enviando mensaje de texto');
         await geminiAPI.sendTextStream(
           trimmedContent,
           convId || null,
@@ -535,56 +551,29 @@ function Chat() {
           handleError,
           config
         );
-        
-        setTimeout(() => {
-          if (!completeCalled && placeholderAdded) {
-            handleComplete({
-              fullResponse: streamBufferRef.current,
-              conversationId: convId,
-              messageId: null,
-              conversation: currentConversation
-            });
-          }
-        }, 2000);
       }
 
     } catch (error) {
+      console.error('[CHAT] Excepción en envío:', error);
       clearTimeout(safetyTimeoutId);
       
       setIsStreaming(false);
       setIsLoading(false);
+      sendingLockRef.current = false;
       
-      setMessages(prev => 
-        prev.map(msg => {
-          if (msg.id === aiMessageId) {
-            return {
-              ...msg,
-              content: streamBufferRef.current || 'Error al procesar tu mensaje. Por favor, intenta de nuevo.',
-              isStreaming: false,
-              error: true
-            };
-          }
-          return msg;
-        })
-      );
-      
-      const errorMessage = error.response?.data?.message 
-        || error.message 
-        || 'Error al enviar el mensaje';
-      
+      const errorMessage = error.response?.data?.message || error.message || 'Error al enviar el mensaje';
       toast.error(errorMessage);
     }
-  }, [selectedFiles, currentConversation, navigate, loadConversations, temperature, isStreaming, processChunkWithDelay]);
-  
-  const handleCancelStreaming = useCallback(() => {
-    if (isStreaming && abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-      setIsLoading(false);
-      toast.success('Streaming cancelado');
-    }
-  }, [isStreaming]);
+  }, [
+    selectedFiles, 
+    currentConversation, 
+    navigate, 
+    reloadConversations, 
+    temperature, 
+    isStreaming, 
+    isLoading,
+    processChunkWithDelay
+  ]);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -634,7 +623,12 @@ function Chat() {
           temperature={temperature}
           setTemperature={setTemperature}
           isStreaming={isStreaming}
-          onCancelStreaming={handleCancelStreaming}
+          onCancelStreaming={() => {
+            setIsStreaming(false);
+            setIsLoading(false);
+            sendingLockRef.current = false;
+            toast.success('Streaming cancelado');
+          }}
         />
 
         <MessageList
@@ -645,11 +639,11 @@ function Chat() {
 
         <ChatInput
           onSendMessage={handleSendMessage}
-          isLoading={isLoading}
+          isLoading={isLoading || isStreaming || sendingLockRef.current}
           selectedFiles={selectedFiles}
           onFileSelect={handleFileSelect}
           onRemoveFile={handleRemoveFile}
-          disabled={isStreaming}
+          disabled={isLoading || isStreaming || sendingLockRef.current}
         />
       </main>
     </div>

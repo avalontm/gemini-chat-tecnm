@@ -17,14 +17,14 @@ function ChatInput({
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isStackExpanded, setIsStackExpanded] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const dropZoneRef = useRef(null);
   const stackRef = useRef(null);
+  const isSubmittingRef = useRef(false);
 
-  // UTILIDADES
-  
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -37,15 +37,22 @@ function ChatInput({
     adjustTextareaHeight();
   }, [inputMessage]);
 
-  // Focus automatico al montar
   useEffect(() => {
     if (textareaRef.current && !isLoading && !disabled) {
       textareaRef.current.focus();
     }
+    
+    if (!isLoading && !disabled) {
+      isSubmittingRef.current = false;
+    }
   }, [isLoading, disabled]);
 
-  // PREVIEWS DE IMAGENES
-  
+  useEffect(() => {
+    return () => {
+      isSubmittingRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     const newPreviews = [];
     const imageFiles = selectedFiles.filter(file => file.type.startsWith('image/'));
@@ -64,8 +71,6 @@ function ChatInput({
     }
   }, [selectedFiles]);
 
-  // DRAG & DROP
-  
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -124,8 +129,6 @@ function ChatInput({
     };
   }, [isLoading, disabled, selectedFiles]);
 
-  // CLICK OUTSIDE PARA CERRAR STACK
-  
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (stackRef.current && !stackRef.current.contains(e.target) && isStackExpanded) {
@@ -142,20 +145,24 @@ function ChatInput({
     };
   }, [isStackExpanded]);
 
-  // HANDLERS
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const sendMessage = () => {
+    if (isSubmittingRef.current) {
+      console.warn('[ChatInput] Envío bloqueado - isSubmittingRef es true');
+      return false;
+    }
     
     const trimmedMessage = inputMessage.trim();
     
     if (!trimmedMessage && selectedFiles.length === 0) {
-      return;
+      return false;
     }
 
     if (isLoading || disabled) {
-      return;
+      return false;
     }
+
+    isSubmittingRef.current = true;
+    console.log('[ChatInput] Enviando mensaje desde:', new Error().stack.split('\n')[2]);
     
     onSendMessage(trimmedMessage);
     setInputMessage('');
@@ -163,12 +170,28 @@ function ChatInput({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
+
+    setTimeout(() => {
+      isSubmittingRef.current = false;
+      console.log('[ChatInput] Lock liberado');
+    }, 2000);
+
+    return true;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('[ChatInput] handleSubmit llamado');
+    sendMessage();
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      e.stopPropagation();
+      console.log('[ChatInput] handleKeyDown Enter detectado');
+      sendMessage();
     }
   };
 
@@ -238,8 +261,6 @@ function ChatInput({
 
   const canSubmit = (inputMessage.trim() || selectedFiles.length > 0) && !isLoading && !disabled;
 
-  // RENDER
-
   return (
     <div 
       ref={dropZoneRef}
@@ -248,7 +269,6 @@ function ChatInput({
       }`}
       style={{ paddingTop: isDragging ? '1rem' : undefined }}
     >
-      {/* Overlay de Drag & Drop */}
       {isDragging && (
         <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-sm z-10 flex items-center justify-center pointer-events-none">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border-4 border-blue-500 border-dashed">
@@ -265,17 +285,14 @@ function ChatInput({
 
       <div className={isDragging ? 'p-4' : ''}>
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          {/* Stack de archivos estilo macOS Dock */}
           {selectedFiles.length > 0 && (
             <div className="mb-4 relative" ref={stackRef}>
-              {/* Stack contraido (siempre visible) */}
               <div className="flex items-center justify-between">
                 <button
                   type="button"
                   onClick={toggleStack}
                   className="group relative"
                 >
-                  {/* Stack visual */}
                   <div className="relative w-20 h-20 cursor-pointer">
                     {selectedFiles.slice(0, 3).map((file, index) => {
                       const isImage = file.type.startsWith('image/');
@@ -307,7 +324,6 @@ function ChatInput({
                       );
                     })}
                     
-                    {/* Badge contador */}
                     <div className="absolute -top-2 -right-2 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg z-10 group-hover:scale-110 transition-transform">
                       {selectedFiles.length}
                     </div>
@@ -319,7 +335,6 @@ function ChatInput({
                 </span>
               </div>
 
-              {/* Dock expandido - FLOTANTE hacia arriba */}
               {isStackExpanded && (
                 <div 
                   className="absolute left-0 bottom-full mb-4 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300"
@@ -327,7 +342,6 @@ function ChatInput({
                     transformOrigin: 'bottom left',
                   }}
                 >
-                  {/* Contenedor del Dock con padding extra para el boton X */}
                   <div className="relative pt-3 px-3">
                     <div 
                       className="inline-flex items-end gap-3 px-4 py-3 rounded-2xl border shadow-2xl"
@@ -422,7 +436,6 @@ function ChatInput({
                       <div className="w-px h-12 bg-gradient-to-b from-transparent via-gray-300 dark:via-slate-600 to-transparent opacity-50 ml-1" />
                     </div>
 
-                    {/* Flecha apuntando al stack */}
                     <div className="absolute -bottom-2 left-10 w-4 h-4 rotate-45" style={{
                       background: 'rgba(255, 255, 255, 0.7)',
                       borderRight: '1px solid rgba(200, 200, 200, 0.5)',
@@ -464,7 +477,6 @@ function ChatInput({
               />
             </div>
 
-            {/* Textarea */}
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
@@ -480,7 +492,6 @@ function ChatInput({
               />
             </div>
 
-            {/* Boton enviar */}
             <div className="pb-3">
               <button
                 type="submit"
@@ -507,7 +518,6 @@ function ChatInput({
             </div>
           </div>
 
-          {/* Ayuda y contador */}
           <div className="flex items-center justify-between mt-2 px-2">
             <div className="flex items-center gap-4">
               <p className="text-xs text-gray-500 dark:text-gray-400">
