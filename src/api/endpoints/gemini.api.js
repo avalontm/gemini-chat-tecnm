@@ -166,7 +166,6 @@ export const geminiAPI = {
       let textChunkCount = 0;
       const startTime = Date.now();
 
-      // CRITICO: Variable para controlar si ya llamamos onComplete
       let completeCalled = false;
 
       while (true) {
@@ -207,8 +206,6 @@ export const geminiAPI = {
           if (line.startsWith('data: ')) {
             const data = line.slice(6).trim();
             
-            // CRITICO: Cuando llega [DONE], NO llamar onComplete aqui
-            // Solo marcamos que llegó la señal
             if (data === '[DONE]') {
               logger.info(context, 'Senal [DONE] recibida - se llamara onComplete al salir del loop');
               continue;
@@ -317,7 +314,6 @@ export const geminiAPI = {
         }
       }
 
-      // CRITICO: Llamar onComplete UNA SOLA VEZ al terminar el loop
       if (onComplete && !completeCalled) {
         completeCalled = true;
         logger.info(context, 'Llamando onComplete (stream finalizado)');
@@ -595,7 +591,6 @@ export const geminiAPI = {
         }
       }
 
-      // CRITICO: Llamar onComplete al salir del loop
       if (onComplete && !completeCalled) {
         completeCalled = true;
         logger.info(context, 'Llamando onComplete (stream finalizado)');
@@ -630,6 +625,41 @@ export const geminiAPI = {
         onError(error);
       }
       
+      throw error;
+    }
+  },
+
+  /**
+   * Transcribir audio a texto usando Gemini
+   */
+  transcribeAudio: async (audioBlob) => {
+    const context = 'GEMINI_API.transcribeAudio';
+    
+    try {
+      logger.info(context, 'Iniciando transcripcion de audio', {
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type
+      });
+
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      const response = await api.post('/api/gemini/voice/transcribe', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      validateServerResponse(response, context);
+      
+      logger.success(context, 'Audio transcrito exitosamente', {
+        transcriptionLength: response.data?.data?.transcription?.length || 0
+      });
+
+      return response;
+    } catch (error) {
+      const errorInfo = handleError(error, context, { showToast: false });
+      logger.error(context, 'Error al transcribir audio', errorInfo);
       throw error;
     }
   },

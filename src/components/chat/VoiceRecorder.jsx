@@ -2,187 +2,236 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Loader2, AlertCircle } from 'lucide-react';
+import { geminiAPI } from '@api/endpoints/gemini.api';
 
 function VoiceRecorder({ onTranscript, disabled = false }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const recognitionRef = useRef(null);
-  const timeoutRef = useRef(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const durationIntervalRef = useRef(null);
   const errorTimeoutRef = useRef(null);
 
   useEffect(() => {
-    // Verificar si el navegador soporta Web Speech API
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      setError('Tu navegador no soporta reconocimiento de voz');
-      return;
-    }
-
-    // Inicializar reconocimiento de voz
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'es-MX';
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      console.log('[VOICE] Grabación iniciada');
-      setIsRecording(true);
-      setError(null);
-      setRetryCount(0);
-      
-      // Timeout de seguridad (30 segundos máximo)
-      timeoutRef.current = setTimeout(() => {
-        console.log('[VOICE] Timeout alcanzado, deteniendo grabación');
-        recognition.stop();
-      }, 30000);
-    };
-
-    recognition.onresult = (event) => {
-      console.log('[VOICE] Resultado recibido');
-      const transcript = event.results[0][0].transcript;
-      const confidence = event.results[0][0].confidence;
-      console.log('[VOICE] Transcripción:', transcript, 'Confianza:', confidence);
-      
-      if (transcript && transcript.trim()) {
-        onTranscript(transcript.trim());
-        setError(null);
-        setRetryCount(0);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error('[VOICE] Error:', event.error);
-      
-      let errorMessage = 'Error en el reconocimiento de voz';
-      let shouldRetry = false;
-      
-      switch (event.error) {
-        case 'no-speech':
-          errorMessage = 'No se detectó voz. Intenta de nuevo.';
-          break;
-        case 'audio-capture':
-          errorMessage = 'No se pudo acceder al micrófono';
-          break;
-        case 'not-allowed':
-          errorMessage = 'Permiso de micrófono denegado';
-          break;
-        case 'network':
-          errorMessage = 'Error de conexión. Verifica tu internet.';
-          shouldRetry = retryCount < 2;
-          if (shouldRetry) {
-            errorMessage = `Error de red. Reintentando... (${retryCount + 1}/3)`;
-          }
-          break;
-        case 'aborted':
-          errorMessage = 'Grabación cancelada';
-          break;
-        case 'service-not-allowed':
-          errorMessage = 'Servicio de reconocimiento no disponible';
-          break;
-        default:
-          errorMessage = `Error: ${event.error}`;
-      }
-      
-      // SIEMPRE restaurar el estado del botón
-      setIsRecording(false);
-      setIsProcessing(false);
-      setError(errorMessage);
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // Auto-reintentar en errores de red
-      if (shouldRetry) {
-        console.log('[VOICE] Reintentando en 1 segundo...');
-        setRetryCount(prev => prev + 1);
-        
-        errorTimeoutRef.current = setTimeout(() => {
-          setError(null);
-          startRecording();
-        }, 1000);
-      } else {
-        // Limpiar error después de 5 segundos y resetear contador
-        errorTimeoutRef.current = setTimeout(() => {
-          setError(null);
-          setRetryCount(0);
-        }, 5000);
-      }
-    };
-
-    recognition.onend = () => {
-      console.log('[VOICE] Grabación finalizada');
-      
-      // SIEMPRE restaurar el estado del botón
-      setIsRecording(false);
-      setIsProcessing(false);
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-
-    recognitionRef.current = recognition;
-
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      stopRecording();
+      
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
       }
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
+      
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [onTranscript, retryCount]);
+  }, []);
 
-  const startRecording = () => {
-    if (!recognitionRef.current || disabled) return;
-    
+  const startRecording = async () => {
+    if (disabled) return;
+
     try {
       setError(null);
-      recognitionRef.current.start();
+      audioChunksRef.current = [];
+      setRecordingDuration(0);
+
+      console.log('[VOICE] Solicitando acceso al microfono...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      streamRef.current = stream;
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
+
+      console.log('[VOICE] Usando formato:', mimeType);
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 128000
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+          console.log('[VOICE] Chunk de audio recibido:', event.data.size, 'bytes');
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        console.log('[VOICE] Grabacion detenida, procesando audio...');
+        
+        if (durationIntervalRef.current) {
+          clearInterval(durationIntervalRef.current);
+        }
+
+        if (audioChunksRef.current.length === 0) {
+          console.error('[VOICE] No se grabaron chunks de audio');
+          setError('No se pudo grabar audio');
+          setIsRecording(false);
+          setIsProcessing(false);
+          return;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('[VOICE] Blob creado:', audioBlob.size, 'bytes', audioBlob.type);
+
+        if (audioBlob.size < 1000) {
+          console.error('[VOICE] Audio muy corto');
+          setError('Audio demasiado corto. Intenta de nuevo.');
+          setIsRecording(false);
+          setIsProcessing(false);
+          
+          errorTimeoutRef.current = setTimeout(() => {
+            setError(null);
+          }, 3000);
+          return;
+        }
+
+        await transcribeAudio(audioBlob);
+      };
+
+      mediaRecorder.onerror = (event) => {
+        console.error('[VOICE] Error en MediaRecorder:', event.error);
+        setError('Error al grabar audio');
+        setIsRecording(false);
+        setIsProcessing(false);
+        
+        errorTimeoutRef.current = setTimeout(() => {
+          setError(null);
+        }, 3000);
+      };
+
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+      console.log('[VOICE] Grabacion iniciada');
+
+      durationIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
     } catch (err) {
-      console.error('[VOICE] Error al iniciar:', err);
+      console.error('[VOICE] Error al iniciar grabacion:', err);
       
-      // Si ya está grabando, ignorar el error
-      if (err.name === 'InvalidStateError') {
-        console.log('[VOICE] Ya está grabando, ignorando');
-        return;
+      let errorMessage = 'No se pudo acceder al microfono';
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage = 'Permiso de microfono denegado';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = 'No se encontro microfono';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage = 'Microfono en uso por otra aplicacion';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage = 'Configuracion de audio no soportada';
+      } else if (err.name === 'TypeError') {
+        errorMessage = 'Navegador no soporta grabacion de audio';
       }
       
-      setError('No se pudo iniciar la grabación');
+      setError(errorMessage);
+      setIsRecording(false);
+      setIsProcessing(false);
       
-      // Limpiar error después de 3 segundos
       errorTimeoutRef.current = setTimeout(() => {
         setError(null);
-      }, 3000);
+      }, 5000);
     }
   };
 
   const stopRecording = () => {
-    if (!recognitionRef.current) return;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('[VOICE] Deteniendo grabacion...');
+      setIsProcessing(true);
+      mediaRecorderRef.current.stop();
+      
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    }
+  };
+
+  const transcribeAudio = async (audioBlob) => {
+    setIsProcessing(true);
     
     try {
-      setIsProcessing(true);
-      recognitionRef.current.stop();
+      console.log('[VOICE] Enviando audio al servidor para transcribir...');
+      
+      const response = await geminiAPI.transcribeAudio(audioBlob);
+      
+      if (response.data && response.data.data && response.data.data.transcription) {
+        const transcription = response.data.data.transcription.trim();
+        
+        console.log('[VOICE] Transcripcion recibida:', transcription);
+        
+        if (transcription) {
+          onTranscript(transcription);
+          setError(null);
+        } else {
+          setError('No se detecto voz en el audio');
+          
+          errorTimeoutRef.current = setTimeout(() => {
+            setError(null);
+          }, 3000);
+        }
+      } else {
+        throw new Error('Respuesta invalida del servidor');
+      }
+      
     } catch (err) {
-      console.error('[VOICE] Error al detener:', err);
+      console.error('[VOICE] Error al transcribir:', err);
       
-      // Forzar restauración del estado en caso de error
-      setIsRecording(false);
-      setIsProcessing(false);
-      setError('Error al detener grabación');
+      let errorMessage = 'Error al transcribir audio';
       
-      // Auto-limpiar error
+      if (err.response) {
+        const status = err.response.status;
+        const serverMessage = err.response.data?.message;
+        
+        if (status === 400) {
+          errorMessage = serverMessage || 'Formato de audio no valido';
+        } else if (status === 401) {
+          errorMessage = 'Sesion expirada. Inicia sesion nuevamente';
+        } else if (status === 413) {
+          errorMessage = 'Audio muy largo (max 25MB)';
+        } else if (status === 429) {
+          errorMessage = 'Demasiadas solicitudes. Espera un momento';
+        } else if (status >= 500) {
+          errorMessage = 'Error del servidor. Intenta mas tarde';
+        } else if (serverMessage) {
+          errorMessage = serverMessage;
+        }
+      } else if (err.message === 'Network Error') {
+        errorMessage = 'Sin conexion a internet';
+      }
+      
+      setError(errorMessage);
+      
       errorTimeoutRef.current = setTimeout(() => {
         setError(null);
-      }, 3000);
+      }, 5000);
+      
+    } finally {
+      setIsRecording(false);
+      setIsProcessing(false);
+      setRecordingDuration(0);
+      
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+      }
     }
   };
 
@@ -194,26 +243,23 @@ function VoiceRecorder({ onTranscript, disabled = false }) {
     }
   };
 
-  // Limpiar error después de cierto tiempo
-  useEffect(() => {
-    if (error && !isRecording && !isProcessing) {
-      errorTimeoutRef.current = setTimeout(() => {
-        setError(null);
-        setRetryCount(0);
-      }, 5000);
-    }
-
-    return () => {
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-    };
-  }, [error, isRecording, isProcessing]);
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const getButtonColor = () => {
     if (error) return 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20';
     if (isRecording) return 'bg-red-500 text-white animate-pulse';
     return 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700';
+  };
+
+  const getTooltipText = () => {
+    if (error) return error;
+    if (isProcessing) return 'Transcribiendo audio...';
+    if (isRecording) return `Grabando... ${formatDuration(recordingDuration)} (click para detener)`;
+    return 'Grabar mensaje de voz';
   };
 
   return (
@@ -223,13 +269,7 @@ function VoiceRecorder({ onTranscript, disabled = false }) {
         onClick={toggleRecording}
         disabled={disabled || isProcessing}
         className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed group relative ${getButtonColor()}`}
-        title={
-          error
-            ? error
-            : isRecording
-            ? 'Detener grabación (click)'
-            : 'Grabar mensaje de voz'
-        }
+        title={getTooltipText()}
       >
         {isProcessing ? (
           <Loader2 className="w-5 h-5 animate-spin" />
@@ -241,19 +281,23 @@ function VoiceRecorder({ onTranscript, disabled = false }) {
           <Mic className="w-5 h-5" />
         )}
         
-        {!isRecording && !error && (
+        {!isRecording && !error && !isProcessing && (
           <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-            Grabar voz (requiere internet)
+            Grabar voz
           </span>
         )}
       </button>
 
-      {/* Indicador de grabación activa */}
       {isRecording && (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
       )}
 
-      {/* Mensaje de error flotante */}
+      {isRecording && recordingDuration > 0 && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/90 backdrop-blur-sm text-white text-xs rounded-lg whitespace-nowrap z-50 animate-in fade-in slide-in-from-bottom-2">
+          {formatDuration(recordingDuration)}
+        </div>
+      )}
+
       {error && (
         <div 
           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-500 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50 animate-in fade-in slide-in-from-bottom-2"
