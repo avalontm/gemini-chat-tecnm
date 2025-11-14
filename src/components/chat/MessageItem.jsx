@@ -6,12 +6,13 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '@context/AuthContext';
 import { useTheme } from '@context/ThemeContext';
 
 function CodeBlock({ language, code }) {
   const [copied, setCopied] = useState(false);
+  const { theme } = useTheme();
 
   const handleCopy = async () => {
     try {
@@ -24,20 +25,36 @@ function CodeBlock({ language, code }) {
     }
   };
 
+  const isDark = theme === 'dark';
+
   return (
-    <div className="my-4 rounded-lg overflow-hidden border border-gray-700 bg-gray-900">
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
-        <span className="text-xs font-medium text-gray-300 uppercase">
+    <div className={`my-4 rounded-lg overflow-hidden border shadow-sm ${
+      isDark 
+        ? 'border-slate-600 bg-slate-900' 
+        : 'border-gray-300 bg-gray-50'
+    }`}>
+      <div className={`flex items-center justify-between px-4 py-2 border-b ${
+        isDark 
+          ? 'bg-slate-800 border-slate-700' 
+          : 'bg-gray-100 border-gray-300'
+      }`}>
+        <span className={`text-xs font-medium uppercase ${
+          isDark ? 'text-gray-300' : 'text-gray-700'
+        }`}>
           {language || 'code'}
         </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-2 px-3 py-1 text-xs font-medium text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
+          className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded transition-colors ${
+            isDark
+              ? 'text-gray-300 hover:text-white hover:bg-slate-700'
+              : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200'
+          }`}
         >
           {copied ? (
             <>
               <Check className="w-4 h-4" />
-              Copiado!
+              Copiado
             </>
           ) : (
             <>
@@ -48,7 +65,7 @@ function CodeBlock({ language, code }) {
         </button>
       </div>
       <SyntaxHighlighter
-        style={vscDarkPlus}
+        style={isDark ? vscDarkPlus : vs}
         language={language || 'text'}
         PreTag="div"
         className="!m-0 !p-4 overflow-x-auto"
@@ -57,11 +74,20 @@ function CodeBlock({ language, code }) {
           padding: '1rem',
           borderRadius: 0,
           fontSize: '0.875rem',
-          background: '#1e1e1e',
+          background: isDark ? '#1e1e1e' : '#ffffff',
           lineHeight: '1.5'
         }}
-        wrapLines={true}
-        wrapLongLines={true}
+        codeTagProps={{
+          style: {
+            background: 'transparent',
+            fontFamily: 'monospace'
+          }
+        }}
+        lineProps={{
+          style: { background: 'transparent' }
+        }}
+        wrapLines={false}
+        showLineNumbers={false}
       >
         {String(code).replace(/\n$/, '')}
       </SyntaxHighlighter>
@@ -69,19 +95,14 @@ function CodeBlock({ language, code }) {
   );
 }
 
-// Función mejorada para limpiar contenido de Gemini
 function cleanGeminiContent(content) {
   if (!content) return '';
   
   let cleaned = content;
 
-  // 1. Limpiar filas de separadores duplicados en tablas
-  // Gemini genera: | Header | | --- | --- | | Row |
-  // Necesitamos: | Header | \n | --- | \n | Row |
   cleaned = cleaned.replace(
     /(\|[^\n]+\|)\s*(\|[\s\-:|]+\|)\s*(\|[^\n]+\|)/g,
     (match, header, separator, row) => {
-      // Verificar si el separador es válido (contiene ---)
       if (separator.includes('---')) {
         return `${header}\n${separator}\n${row}`;
       }
@@ -89,20 +110,16 @@ function cleanGeminiContent(content) {
     }
   );
 
-  // 2. Eliminar separadores intermedios duplicados en el cuerpo de la tabla
-  // Mantener solo el separador después del header
   cleaned = cleaned.replace(
     /(\|[^\n]+\|\n\|[\s\-:|]+\|)\n(\|[\s\-:|]+\|\n)+/g,
     '$1\n'
   );
 
-  // 3. Normalizar separadores de tabla (mínimo 3 guiones)
   cleaned = cleaned.replace(
     /\|\s*-{1,2}\s*\|/g,
     '| --- |'
   );
 
-  // 4. Limpiar URLs mal formateadas
   cleaned = cleaned.replace(/(https?:\/\/[^\s\)]+?)(?:%5D|\])\((https?:\/\/[^\s\)]+)\)/gi, '$1');
   cleaned = cleaned.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s\)]+?)\)\]\(\2\)/gi, '![$1]($2)');
 
@@ -113,20 +130,15 @@ function MessageItem({ message, formatTime }) {
   const { user } = useAuth();
   const { theme } = useTheme();
 
-  // Procesar contenido con useMemo para mejor performance
   const processedContent = useMemo(() => {
-  const content = message.content || '';
-  
-  // Procesar SIEMPRE, pero de forma más ligera durante streaming
-  if (message.isStreaming) {
-    // Procesamiento mínimo durante streaming
-    return content.replace(/(\|\s*---+\s*\|[\s\S]*?)(\|\s*---+\s*\|)+/g, '$1');
-  }
-  
-  // Procesamiento completo cuando termina el streaming
-  return cleanGeminiContent(content);
-}, [message.content, message.isStreaming]);
-
+    const content = message.content || '';
+    
+    if (message.isStreaming) {
+      return content.replace(/(\|\s*---+\s*\|[\s\S]*?)(\|\s*---+\s*\|)+/g, '$1');
+    }
+    
+    return cleanGeminiContent(content);
+  }, [message.content, message.isStreaming]);
 
   const renderedContent = useMemo(() => {
     if (message.type === 'user') {
@@ -140,10 +152,9 @@ function MessageItem({ message, formatTime }) {
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-bold prose-p:leading-relaxed prose-ul:leading-relaxed prose-ol:leading-relaxed prose-li:leading-relaxed">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]} // Soporte para tablas, tachados, etc.
-          rehypePlugins={[rehypeRaw]} // Soporte para HTML inline
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw]}
           components={{
-            // BLOQUES DE CÓDIGO
             code({ node, inline, className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
               const codeString = String(children).replace(/\n$/, '');
@@ -167,11 +178,9 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // TEXTO CON URLs automáticas
             text({ node, children }) {
               if (typeof children !== 'string') return children;
               
-              // Solo convertir URLs durante streaming para mejor performance
               if (message.isStreaming) {
                 return (
                   <>
@@ -186,7 +195,6 @@ function MessageItem({ message, formatTime }) {
                 );
               }
 
-              // Convertir URLs a enlaces después del streaming
               const urlRegex = /(https?:\/\/[^\s\)]+?)(?=[\s,;.!?]|$)/g;
               const parts = children.split(urlRegex);
               
@@ -211,7 +219,6 @@ function MessageItem({ message, formatTime }) {
               });
             },
 
-            // ELEMENTOS BÁSICOS
             pre({ children }) {
               return <div className="my-0">{children}</div>;
             },
@@ -232,7 +239,6 @@ function MessageItem({ message, formatTime }) {
               return <li className="mb-1 leading-relaxed">{children}</li>;
             },
 
-            // ENCABEZADOS
             h1({ children }) {
               return <h1 className="text-2xl font-bold mb-4 mt-6 text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-600 pb-2">{children}</h1>;
             },
@@ -252,7 +258,6 @@ function MessageItem({ message, formatTime }) {
               return <h6 className="text-xs font-bold mb-2 mt-3 text-gray-900 dark:text-white uppercase text-gray-500 dark:text-gray-400">{children}</h6>;
             },
 
-            // CITAS Y LÍNEAS
             blockquote({ children }) {
               return (
                 <blockquote className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 py-2 my-4 italic bg-blue-50 dark:bg-blue-900/20 rounded-r text-gray-700 dark:text-gray-300">
@@ -265,7 +270,6 @@ function MessageItem({ message, formatTime }) {
               return <hr className="my-6 border-gray-300 dark:border-slate-600" />;
             },
 
-            // ENLACES
             a({ href, children }) {
               const isExternal = href?.startsWith('http');
               return (
@@ -281,7 +285,6 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // TABLAS (mejoradas con remark-gfm)
             table({ children }) {
               return (
                 <div className="overflow-x-auto my-4 border border-gray-200 dark:border-slate-600 rounded-lg shadow-sm">
@@ -323,7 +326,6 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // IMÁGENES
             img({ src, alt, title }) {
               return (
                 <div className="my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-600">
@@ -344,7 +346,6 @@ function MessageItem({ message, formatTime }) {
               );
             },
 
-            // ELEMENTOS DE ÉNFASIS
             strong({ children }) {
               return <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>;
             },
@@ -353,12 +354,10 @@ function MessageItem({ message, formatTime }) {
               return <em className="italic text-gray-800 dark:text-gray-200">{children}</em>;
             },
 
-            // TACHADO (soporte de remark-gfm)
             del({ children }) {
               return <del className="line-through text-gray-500 dark:text-gray-400">{children}</del>;
             },
 
-            // LISTAS DE TAREAS (soporte de remark-gfm)
             input({ checked, type }) {
               if (type === 'checkbox') {
                 return (
@@ -378,7 +377,7 @@ function MessageItem({ message, formatTime }) {
         </ReactMarkdown>
       </div>
     );
-  }, [processedContent, message.isStreaming, message.type]);
+  }, [processedContent, message.isStreaming, message.type, theme]);
 
   return (
     <div

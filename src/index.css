@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Agregar las capas base de Tailwind */
 @layer base {
   * {
     margin: 0;
@@ -36,7 +35,6 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer utilities {
-  /* Custom Scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -72,18 +70,12 @@
     text-wrap: balance;
   }
 
-  /* ============================================
-     ESTILOS PARA MARKDOWN / TYPOGRAPHY
-     ============================================ */
-
-  /* Base prose */
   .prose {
     color: inherit;
     max-width: none;
     line-height: 1.75;
   }
 
-  /* Párrafos */
   .prose :where(p):not(:where([class~="not-prose"] *)) {
     margin-top: 0;
     margin-bottom: 0.75rem;
@@ -94,7 +86,6 @@
     margin-bottom: 0;
   }
 
-  /* Código inline */
   .prose :where(code):not(:where([class~="not-prose"] *)) {
     color: inherit;
     font-weight: 400;
@@ -109,7 +100,6 @@
     color: rgb(248 250 252);
   }
 
-  /* Bloques de código */
   .prose :where(pre):not(:where([class~="not-prose"] *)) {
     margin-top: 0.75rem;
     margin-bottom: 0.75rem;
@@ -122,6 +112,10 @@
   .prose pre {
     overflow-x: auto;
     scrollbar-width: thin;
+    scrollbar-color: #9ca3af #f3f4f6;
+  }
+
+  .dark .prose pre {
     scrollbar-color: #4b5563 #1f2937;
   }
 
@@ -130,11 +124,21 @@
   }
 
   .prose pre::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+  }
+
+  .dark .prose pre::-webkit-scrollbar-track {
     background: #1f2937;
     border-radius: 4px;
   }
 
   .prose pre::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+  }
+
+  .dark .prose pre::-webkit-scrollbar-thumb {
     background: #4b5563;
     border-radius: 4px;
   }
@@ -143,7 +147,24 @@
     background: #6b7280;
   }
 
-  /* Listas desordenadas */
+  .dark .prose pre::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  .prose :where(pre code):not(:where([class~="not-prose"] *)) {
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    border-radius: 0;
+  }
+
+  .prose :where(pre code span):not(:where([class~="not-prose"] *)) {
+    background-color: transparent !important;
+  }
+
   .prose :where(ul):not(:where([class~="not-prose"] *)) {
     list-style-type: disc;
     padding-left: 1.5rem;
@@ -151,7 +172,6 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Listas ordenadas */
   .prose :where(ol):not(:where([class~="not-prose"] *)) {
     list-style-type: decimal;
     padding-left: 1.5rem;
@@ -159,7 +179,6 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Items de lista */
   .prose :where(li):not(:where([class~="not-prose"] *)) {
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
@@ -171,7 +190,6 @@
     margin-bottom: 0.5rem;
   }
 
-  /* Citas */
   .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
     font-style: italic;
     border-left-width: 4px;
@@ -190,7 +208,6 @@
     background-color: rgb(30 58 138 / 0.2);
   }
 
-  /* Encabezados */
   .prose :where(h1):not(:where([class~="not-prose"] *)) {
     font-size: 1.5rem;
     line-height: 2rem;
@@ -243,7 +260,6 @@
     color: rgb(249 250 251);
   }
 
-  /* Enlaces */
   .prose :where(a):not(:where([class~="not-prose"] *)) {
     color: rgb(59 130 246);
     text-decoration: none;
@@ -264,7 +280,6 @@
     color: rgb(147 197 253);
   }
 
-  /* Negrita */
   .prose :where(strong):not(:where([class~="not-prose"] *)) {
     font-weight: 700;
     color: rgb(17 24 39);
@@ -274,12 +289,10 @@
     color: rgb(249 250 251);
   }
 
-  /* Cursiva */
   .prose :where(em):not(:where([class~="not-prose"] *)) {
     font-style: italic;
   }
 
-  /* Línea horizontal */
   .prose :where(hr):not(:where([class~="not-prose"] *)) {
     border-color: rgb(209 213 219);
     margin-top: 1rem;
@@ -290,7 +303,6 @@
     border-color: rgb(75 85 99);
   }
 
-  /* Tablas */
   .prose :where(table):not(:where([class~="not-prose"] *)) {
     width: 100%;
     border-collapse: collapse;
@@ -342,7 +354,6 @@
     background-color: rgb(30 41 59);
   }
 
-  /* Imágenes */
   .prose :where(img):not(:where([class~="not-prose"] *)) {
     max-width: 100%;
     height: auto;
@@ -351,7 +362,6 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Tamaños de prose */
   .prose-sm {
     font-size: 0.875rem;
     line-height: 1.5;
@@ -365,7 +375,6 @@
     font-size: 0.8125em;
   }
 
-  /* Modo inverso para dark mode */
   .dark .prose-invert {
     color: rgb(229 231 235);
   }

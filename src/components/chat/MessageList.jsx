@@ -6,19 +6,54 @@ import TypingIndicator from './TypingIndicator';
 
 function MessageList({ messages, isLoading, formatTime }) {
   const messagesEndRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
+  const lastMessageLengthRef = useRef(0);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior = 'auto') => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior,
+        block: 'end'
+      });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
 
-  // Verificar si hay un mensaje en streaming
+    const lastMessage = messages[messages.length - 1];
+    const currentLength = lastMessage?.content?.length || 0;
+
+    if (lastMessage?.isStreaming) {
+      const lengthDiff = currentLength - lastMessageLengthRef.current;
+      
+      if (lengthDiff > 50) {
+        scrollToBottom('auto');
+        lastMessageLengthRef.current = currentLength;
+      }
+    } else {
+      scrollTimeoutRef.current = setTimeout(() => {
+        scrollToBottom('smooth');
+        lastMessageLengthRef.current = 0;
+      }, 100);
+    }
+
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [messages]);
+
+  useEffect(() => {
+    if (isLoading) {
+      scrollToBottom('smooth');
+    }
+  }, [isLoading]);
+
   const hasStreamingMessage = messages.some(msg => msg.isStreaming);
-
-  // Solo mostrar TypingIndicator si isLoading es true Y NO hay mensaje streaming
   const shouldShowTypingIndicator = isLoading && !hasStreamingMessage;
 
   return (
